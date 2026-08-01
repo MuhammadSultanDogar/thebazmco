@@ -16,4 +16,22 @@ export type SiteData = {
   invoices: Invoice[]
   orderCounter: number
   invoiceCounter: number
+  updatedAt: string
+}
+
+export type StorageBackend = "vercel-blob" | "local-file" | "memory"
+
+export type StorageInfo = {
+  backend: StorageBackend
+  persistent: boolean
+  configured: boolean
+  updatedAt: string | null
+  blobSizeBytes: number | null
+  counts: {
+    mascots: number
+    activeMascots: number
+    orders: number
+    invoices: number
+  }
+  message: string
 }

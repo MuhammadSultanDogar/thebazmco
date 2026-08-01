@@ -27,5 +27,22 @@ export function createDefaultSiteData(): SiteData {
     invoices: [],
     orderCounter: 1,
     invoiceCounter: 1,
+    updatedAt: new Date().toISOString(),
+  }
+}
+
+export function normalizeSiteData(raw: Partial<SiteData> | null | undefined): SiteData {
+  const defaults = createDefaultSiteData()
+  if (!raw) return defaults
+
+  return {
+    mascots: Array.isArray(raw.mascots) ? raw.mascots : defaults.mascots,
+    rates: raw.rates ?? defaults.rates,
+    terms: raw.terms ?? defaults.terms,
+    orders: Array.isArray(raw.orders) ? raw.orders : defaults.orders,
+    invoices: Array.isArray(raw.invoices) ? raw.invoices : defaults.invoices,
+    orderCounter: raw.orderCounter ?? defaults.orderCounter,
+    invoiceCounter: raw.invoiceCounter ?? defaults.invoiceCounter,
+    updatedAt: raw.updatedAt ?? defaults.updatedAt,
   }
 }

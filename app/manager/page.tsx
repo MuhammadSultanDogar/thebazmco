@@ -18,10 +18,12 @@ import {
   ShoppingBag,
   Pencil,
   Package,
+  Database,
 } from "lucide-react"
 import { InvoiceTemplate } from "@/components/invoice-template"
 import { ShopOrdersTab } from "@/components/manager/shop-orders-tab"
 import { ProductImageInput } from "@/components/manager/product-image-input"
+import { StorageTab } from "@/components/manager/storage-tab"
 import type { MascotProduct, MascotAccessory } from "@/lib/types/mascot"
 
 
@@ -84,7 +86,7 @@ export default function ManagerPage() {
   const [isSavingTerms, setIsSavingTerms] = useState(false)
 
   // Tabs
-  const [activeTab, setActiveTab] = useState<"rates" | "invoices" | "terms" | "mascots" | "orders">("rates")
+  const [activeTab, setActiveTab] = useState<"rates" | "invoices" | "terms" | "mascots" | "orders" | "storage">("rates")
 
   // Mascots
   const [mascots, setMascots] = useState<MascotProduct[]>([])
@@ -713,6 +715,13 @@ export default function ManagerPage() {
           >
             Terms & Conditions
           </Button>
+          <Button
+            variant={activeTab === "storage" ? "default" : "outline"}
+            onClick={() => setActiveTab("storage")}
+          >
+            <Database className="w-4 h-4 mr-2" />
+            Data Storage
+          </Button>
         </div>
 
         {error && (
@@ -819,6 +828,8 @@ export default function ManagerPage() {
 
         {/* Shop Orders Tab */}
         {activeTab === "orders" && <ShopOrdersTab />}
+
+        {activeTab === "storage" && <StorageTab />}
 
         {/* Mascots Tab */}
         {activeTab === "mascots" && (
