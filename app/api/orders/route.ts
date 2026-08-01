@@ -1,69 +1,86 @@
-import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 import type { ShopOrder, OrderStatus } from "@/lib/types/order"
-import { loadSiteConfig, saveSiteConfig } from "@/lib/store"
+import { loadSiteConfig, loadSiteData, saveSiteConfig } from "@/lib/store"
 import {
   appendOrder,
   loadOrdersFromStore,
   removeOrder,
   updateOrderStatus,
 } from "@/lib/store/orders"
+import {
+  assertSameOrigin,
+  getClientIp,
+  noStoreJson,
+  requireManagerAuth,
+  tooManyRequestsResponse,
+} from "@/lib/auth/manager"
+import { enforceRateLimit } from "@/lib/security/rate-limit"
+import { validateOrderPayload } from "@/lib/security/validate-order"
+import { secureJson } from "@/lib/security/headers"
 
 export const dynamic = "force-dynamic"
 
-async function isAuthenticated() {
-  const cookieStore = await cookies()
-  const session = cookieStore.get("manager_session")
-  return session?.value === "authenticated"
-}
+const VALID_STATUSES: OrderStatus[] = [
+  "pending_review",
+  "approved",
+  "dispatched",
+  "rejected",
+]
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url)
-  const showAll = searchParams.get("all") === "true"
-  const status = searchParams.get("status")
+  const authError = await requireManagerAuth()
+  if (authError) return authError
 
-  if (!showAll || !(await isAuthenticated())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  const { searchParams } = new URL(request.url)
+  const status = searchParams.get("status")
 
   let orders = await loadOrdersFromStore()
 
-  if (status && status !== "all") {
+  if (status && status !== "all" && VALID_STATUSES.includes(status as OrderStatus)) {
     orders = orders.filter((o) => o.status === status)
   }
 
   orders.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
 
-  return NextResponse.json(orders, {
-    headers: { "Cache-Control": "no-store" },
-  })
+  return noStoreJson(orders)
 }
 
 export async function POST(request: Request) {
+  if (!assertSameOrigin(request)) {
+    return secureJson({ error: "Forbidden" }, { status: 403 })
+  }
+
+  const ip = getClientIp(request)
+  const allowed = await enforceRateLimit(`orders:create:${ip}`, {
+    limit: 5,
+    windowSeconds: 60 * 60,
+  })
+  if (!allowed) return tooManyRequestsResponse()
+
   try {
     const body = await request.json()
+    const site = await loadSiteData()
+    const validation = validateOrderPayload(body, site.mascots)
 
-    if (!body.customerPhone || !body.customerAddress || !body.paymentImage) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
+    if (!validation.ok) {
+      return secureJson({ error: validation.error }, { status: 400 })
     }
 
-    if (!body.items?.length) {
-      return NextResponse.json({ error: "Cart is empty" }, { status: 400 })
-    }
-
+    const data = validation.data
     const config = await loadSiteConfig()
+
     const order: ShopOrder = {
       id: `order-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       orderNumber: `TBZ-SHOP-${new Date().getFullYear()}-${String(config.orderCounter).padStart(3, "0")}`,
       createdAt: new Date().toISOString(),
-      customerPhone: body.customerPhone,
-      customerAddress: body.customerAddress,
-      items: body.items,
-      subtotal: body.subtotal,
-      shipping: body.shipping,
-      total: body.total,
-      freeShipping: body.freeShipping ?? false,
-      paymentImage: body.paymentImage,
+      customerPhone: data.customerPhone,
+      customerAddress: data.customerAddress,
+      items: data.items,
+      subtotal: data.subtotal,
+      shipping: data.shipping,
+      total: data.total,
+      freeShipping: data.freeShipping,
+      paymentImage: data.paymentImage,
       status: "pending_review",
     }
 
@@ -76,42 +93,52 @@ export async function POST(request: Request) {
     await appendOrder(order, nextConfig)
     await saveSiteConfig(nextConfig)
 
-    return NextResponse.json(order)
+    return secureJson(order)
   } catch (error) {
     console.error("Order create failed:", error)
-    return NextResponse.json({ error: "Failed to save order" }, { status: 500 })
+    return secureJson({ error: "Failed to save order" }, { status: 500 })
   }
 }
 
 export async function PUT(request: Request) {
-  if (!(await isAuthenticated())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  const authError = await requireManagerAuth()
+  if (authError) return authError
+
+  if (!assertSameOrigin(request)) {
+    return secureJson({ error: "Forbidden" }, { status: 403 })
   }
 
   try {
     const body = await request.json()
+    if (!body.id || !VALID_STATUSES.includes(body.status)) {
+      return secureJson({ error: "Invalid request" }, { status: 400 })
+    }
+
     const config = await loadSiteConfig()
     const updated = await updateOrderStatus(body.id, body.status as OrderStatus, config)
-    return NextResponse.json(updated)
+    return noStoreJson(updated)
   } catch (error) {
     if (error instanceof Error && error.message === "NOT_FOUND") {
-      return NextResponse.json({ error: "Order not found" }, { status: 404 })
+      return secureJson({ error: "Order not found" }, { status: 404 })
     }
-    return NextResponse.json({ error: "Invalid request" }, { status: 400 })
+    return secureJson({ error: "Invalid request" }, { status: 400 })
   }
 }
 
 export async function DELETE(request: Request) {
-  if (!(await isAuthenticated())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  const authError = await requireManagerAuth()
+  if (authError) return authError
+
+  if (!assertSameOrigin(request)) {
+    return secureJson({ error: "Forbidden" }, { status: 403 })
   }
 
   const { searchParams } = new URL(request.url)
   const id = searchParams.get("id")
-  if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 })
+  if (!id) return secureJson({ error: "Missing id" }, { status: 400 })
 
   const config = await loadSiteConfig()
   await removeOrder(id, config)
 
-  return NextResponse.json({ success: true })
+  return secureJson({ success: true })
 }

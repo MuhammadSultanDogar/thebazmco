@@ -11,7 +11,10 @@ export interface MascotProduct {
   name: string
   description: string
   price: string
+  /** Primary image (first in `images`) — kept for backward compatibility */
   image: string
+  /** Multiple product photos */
+  images?: string[]
   shipping: string
   accessories: MascotAccessory[]
   category: MascotCategory
@@ -31,6 +34,7 @@ export const createEmptyProduct = (): Omit<MascotProduct, "id" | "sortOrder"> =>
   description: "",
   price: "",
   image: "",
+  images: [],
   shipping: "",
   accessories: [],
   category: "mascot",

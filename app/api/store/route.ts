@@ -1,4 +1,3 @@
-import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 import {
   exportSiteData,
@@ -7,34 +6,37 @@ import {
 } from "@/lib/store"
 import { normalizeSiteData } from "@/lib/store/defaults"
 import type { SiteData } from "@/lib/types/site-data"
+import {
+  assertSameOrigin,
+  noStoreJson,
+  requireManagerAuth,
+} from "@/lib/auth/manager"
+import { secureJson } from "@/lib/security/headers"
 
 export const dynamic = "force-dynamic"
 
-async function isAuthenticated() {
-  const cookieStore = await cookies()
-  return cookieStore.get("manager_session")?.value === "authenticated"
-}
-
 export async function GET(request: Request) {
-  if (!(await isAuthenticated())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  const authError = await requireManagerAuth()
+  if (authError) return authError
 
   const { searchParams } = new URL(request.url)
   const mode = searchParams.get("mode")
 
   if (mode === "export") {
     const data = await exportSiteData()
-    return NextResponse.json(data)
+    return noStoreJson(data)
   }
 
   const info = await getStorageInfo()
-  return NextResponse.json(info)
+  return noStoreJson(info)
 }
 
 export async function POST(request: Request) {
-  if (!(await isAuthenticated())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  const authError = await requireManagerAuth()
+  if (authError) return authError
+
+  if (!assertSameOrigin(request)) {
+    return secureJson({ error: "Forbidden" }, { status: 403 })
   }
 
   try {
@@ -44,11 +46,11 @@ export async function POST(request: Request) {
       const imported = normalizeSiteData(body.data as Partial<SiteData>)
       const saved = await replaceSiteData(imported)
       const info = await getStorageInfo()
-      return NextResponse.json({ success: true, data: saved, info })
+      return noStoreJson({ success: true, data: saved, info })
     }
 
-    return NextResponse.json({ error: "Invalid action" }, { status: 400 })
+    return secureJson({ error: "Invalid action" }, { status: 400 })
   } catch {
-    return NextResponse.json({ error: "Invalid request" }, { status: 400 })
+    return secureJson({ error: "Invalid request" }, { status: 400 })
   }
 }

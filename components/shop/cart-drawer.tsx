@@ -1,7 +1,10 @@
 "use client"
 
+import Image from "next/image"
 import { Minus, Plus, ShoppingCart, Trash2, Truck, X } from "lucide-react"
 import { useCart } from "@/hooks/use-cart"
+import { getProductPrimaryImage } from "@/lib/utils/product-images"
+import { getProductEmoji } from "@/lib/constants/products"
 import { formatPrice, FREE_SHIPPING_THRESHOLD } from "@/lib/constants/payment"
 import {
   Sheet,
@@ -46,13 +49,29 @@ export function CartDrawer() {
         ) : (
           <>
             <div className="flex-1 overflow-y-auto p-5 space-y-4">
-              {items.map(({ product, quantity }) => (
+              {items.map(({ product, quantity }) => {
+                const image = getProductPrimaryImage(product)
+                const emoji = getProductEmoji(product.id, product.category)
+                return (
                 <div
                   key={product.id}
                   className="flex gap-3 p-3 rounded-xl bg-secondary/60 border border-primary/10"
                 >
-                  <div className="w-14 h-14 rounded-lg bg-white border border-primary/10 flex items-center justify-center text-2xl shrink-0">
-                    {product.category === "accessory" ? "⚡" : "🦍"}
+                  <div className="relative w-14 h-14 rounded-lg bg-white border border-primary/10 overflow-hidden shrink-0">
+                    {image ? (
+                      <Image
+                        src={image}
+                        alt={product.name}
+                        fill
+                        unoptimized={image.startsWith("data:image/")}
+                        className="object-cover"
+                        sizes="56px"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center text-xl">
+                        {emoji}
+                      </div>
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-sm truncate">{product.name}</p>
@@ -83,7 +102,7 @@ export function CartDrawer() {
                     </div>
                   </div>
                 </div>
-              ))}
+              )})}
 
               <div className="p-3 rounded-xl bg-primary/5 border border-primary/15 text-sm">
                 <div className="flex items-center gap-2 text-primary font-semibold mb-1">

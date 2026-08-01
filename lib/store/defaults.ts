@@ -1,5 +1,6 @@
 import { DEFAULT_PRODUCTS } from "@/lib/constants/products"
 import type { SiteData } from "@/lib/types/site-data"
+import { normalizeMascotList } from "@/lib/utils/product-images"
 
 export const DEFAULT_TERMS = `A 50% advance payment is required to confirm the booking.
 The remaining amount must be cleared before the start of the event.
@@ -36,7 +37,9 @@ export function normalizeSiteData(raw: Partial<SiteData> | null | undefined): Si
   if (!raw) return defaults
 
   return {
-    mascots: Array.isArray(raw.mascots) ? raw.mascots : defaults.mascots,
+    mascots: Array.isArray(raw.mascots)
+      ? normalizeMascotList(raw.mascots)
+      : defaults.mascots,
     rates: raw.rates ?? defaults.rates,
     terms: raw.terms ?? defaults.terms,
     orders: Array.isArray(raw.orders) ? raw.orders : defaults.orders,

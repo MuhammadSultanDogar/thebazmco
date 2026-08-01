@@ -1,0 +1,137 @@
+import type { MascotProduct } from "@/lib/types/mascot"
+import type { OrderLineItem } from "@/lib/types/order"
+import { FREE_SHIPPING_THRESHOLD, parsePrice } from "@/lib/constants/payment"
+import { isDataUrl } from "@/lib/utils/compress-image"
+
+type OrderPayload = {
+  customerPhone?: string
+  customerAddress?: string
+  paymentImage?: string
+  items?: {
+    productId?: string
+    name?: string
+    price?: string
+    quantity?: number
+  }[]
+  subtotal?: number
+  shipping?: number
+  total?: number
+  freeShipping?: boolean
+}
+
+export type ValidatedOrderInput = {
+  customerPhone: string
+  customerAddress: string
+  paymentImage: string
+  items: OrderLineItem[]
+  subtotal: number
+  shipping: number
+  total: number
+  freeShipping: boolean
+}
+
+const MAX_PHONE_LEN = 20
+const MAX_ADDRESS_LEN = 500
+const MAX_ITEMS = 20
+const MAX_ITEM_QTY = 10
+const MAX_PAYMENT_IMAGE_BYTES = 2_500_000
+
+function calculateTotals(
+  items: { product: MascotProduct; quantity: number }[],
+) {
+  const subtotal = items.reduce(
+    (sum, item) => sum + parsePrice(item.product.price) * item.quantity,
+    0,
+  )
+
+  const freeShipping = subtotal >= FREE_SHIPPING_THRESHOLD
+  const shipping = freeShipping
+    ? 0
+    : items.reduce((max, item) => {
+        const ship = parsePrice(item.product.shipping)
+        return Math.max(max, ship)
+      }, 0)
+
+  return { subtotal, shipping, total: subtotal + shipping, freeShipping }
+}
+
+export function validateOrderPayload(
+  body: OrderPayload,
+  mascots: MascotProduct[],
+): { ok: true; data: ValidatedOrderInput } | { ok: false; error: string } {
+  const phone = body.customerPhone?.trim()
+  const address = body.customerAddress?.trim()
+  const paymentImage = body.paymentImage
+
+  if (!phone || phone.length > MAX_PHONE_LEN) {
+    return { ok: false, error: "Invalid phone number" }
+  }
+
+  if (!address || address.length > MAX_ADDRESS_LEN) {
+    return { ok: false, error: "Invalid delivery address" }
+  }
+
+  if (!paymentImage || !isDataUrl(paymentImage)) {
+    return { ok: false, error: "Payment screenshot is required" }
+  }
+
+  if (Buffer.byteLength(paymentImage, "utf-8") > MAX_PAYMENT_IMAGE_BYTES) {
+    return { ok: false, error: "Payment screenshot is too large" }
+  }
+
+  if (!Array.isArray(body.items) || body.items.length === 0) {
+    return { ok: false, error: "Cart is empty" }
+  }
+
+  if (body.items.length > MAX_ITEMS) {
+    return { ok: false, error: "Too many items in cart" }
+  }
+
+  const activeById = new Map(
+    mascots.filter((m) => m.active).map((m) => [m.id, m]),
+  )
+
+  const resolvedItems: { product: MascotProduct; quantity: number }[] = []
+
+  for (const item of body.items) {
+    if (!item.productId || !item.quantity) {
+      return { ok: false, error: "Invalid cart item" }
+    }
+
+    const quantity = Math.floor(item.quantity)
+    if (quantity < 1 || quantity > MAX_ITEM_QTY) {
+      return { ok: false, error: "Invalid item quantity" }
+    }
+
+    const product = activeById.get(item.productId)
+    if (!product) {
+      return { ok: false, error: "Product unavailable" }
+    }
+
+    if (item.price && item.price !== product.price) {
+      return { ok: false, error: "Price mismatch — refresh and try again" }
+    }
+
+    resolvedItems.push({ product, quantity })
+  }
+
+  const totals = calculateTotals(resolvedItems)
+
+  const lineItems: OrderLineItem[] = resolvedItems.map(({ product, quantity }) => ({
+    productId: product.id,
+    name: product.name,
+    price: product.price,
+    quantity,
+  }))
+
+  return {
+    ok: true,
+    data: {
+      customerPhone: phone,
+      customerAddress: address,
+      paymentImage,
+      items: lineItems,
+      ...totals,
+    },
+  }
+}

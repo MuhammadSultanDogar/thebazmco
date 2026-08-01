@@ -1,21 +1,31 @@
-import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 import type { Invoice } from "@/lib/types/invoice"
 import { loadSiteData, updateSiteData } from "@/lib/store"
+import {
+  assertSameOrigin,
+  noStoreJson,
+  requireManagerAuth,
+} from "@/lib/auth/manager"
+import { secureJson } from "@/lib/security/headers"
+
+export const dynamic = "force-dynamic"
 
 export type { Invoice }
 
 export async function GET() {
+  const authError = await requireManagerAuth()
+  if (authError) return authError
+
   const data = await loadSiteData()
-  return NextResponse.json(data.invoices)
+  return noStoreJson(data.invoices)
 }
 
 export async function POST(request: Request) {
-  const cookieStore = await cookies()
-  const authCookie = cookieStore.get("manager_session")
+  const authError = await requireManagerAuth()
+  if (authError) return authError
 
-  if (authCookie?.value !== "authenticated") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  if (!assertSameOrigin(request)) {
+    return secureJson({ error: "Forbidden" }, { status: 403 })
   }
 
   try {
@@ -32,18 +42,18 @@ export async function POST(request: Request) {
       site.invoices.unshift(created)
     })
 
-    return NextResponse.json(created)
+    return noStoreJson(created)
   } catch {
-    return NextResponse.json({ error: "Invalid data" }, { status: 400 })
+    return secureJson({ error: "Invalid data" }, { status: 400 })
   }
 }
 
 export async function PUT(request: Request) {
-  const cookieStore = await cookies()
-  const authCookie = cookieStore.get("manager_session")
+  const authError = await requireManagerAuth()
+  if (authError) return authError
 
-  if (authCookie?.value !== "authenticated") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  if (!assertSameOrigin(request)) {
+    return secureJson({ error: "Forbidden" }, { status: 403 })
   }
 
   try {
@@ -57,21 +67,21 @@ export async function PUT(request: Request) {
       updated = site.invoices[index]
     })
 
-    return NextResponse.json(updated)
+    return noStoreJson(updated)
   } catch (error) {
     if (error instanceof Error && error.message === "NOT_FOUND") {
-      return NextResponse.json({ error: "Invoice not found" }, { status: 404 })
+      return secureJson({ error: "Invoice not found" }, { status: 404 })
     }
-    return NextResponse.json({ error: "Invalid data" }, { status: 400 })
+    return secureJson({ error: "Invalid data" }, { status: 400 })
   }
 }
 
 export async function DELETE(request: Request) {
-  const cookieStore = await cookies()
-  const authCookie = cookieStore.get("manager_session")
+  const authError = await requireManagerAuth()
+  if (authError) return authError
 
-  if (authCookie?.value !== "authenticated") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  if (!assertSameOrigin(request)) {
+    return secureJson({ error: "Forbidden" }, { status: 403 })
   }
 
   try {
@@ -84,11 +94,11 @@ export async function DELETE(request: Request) {
       site.invoices.splice(index, 1)
     })
 
-    return NextResponse.json({ success: true })
+    return secureJson({ success: true })
   } catch (error) {
     if (error instanceof Error && error.message === "NOT_FOUND") {
-      return NextResponse.json({ error: "Invoice not found" }, { status: 404 })
+      return secureJson({ error: "Invoice not found" }, { status: 404 })
     }
-    return NextResponse.json({ error: "Invalid request" }, { status: 400 })
+    return secureJson({ error: "Invalid request" }, { status: 400 })
   }
 }

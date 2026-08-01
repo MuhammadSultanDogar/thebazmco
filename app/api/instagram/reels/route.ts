@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server"
 import { INSTAGRAM_REELS } from "@/lib/constants/instagram"
+import { getClientIp, tooManyRequestsResponse } from "@/lib/auth/manager"
+import { enforceRateLimit } from "@/lib/security/rate-limit"
 
 export const dynamic = "force-dynamic"
 
@@ -23,7 +25,14 @@ async function fetchReelMeta(url: string): Promise<OEmbedResponse | null> {
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const ip = getClientIp(request)
+  const allowed = await enforceRateLimit(`instagram:reels:${ip}`, {
+    limit: 60,
+    windowSeconds: 60 * 60,
+  })
+  if (!allowed) return tooManyRequestsResponse()
+
   const reels = await Promise.all(
     INSTAGRAM_REELS.map(async (reel) => {
       const meta = await fetchReelMeta(reel.url)

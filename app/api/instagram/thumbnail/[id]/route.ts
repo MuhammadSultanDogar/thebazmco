@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server"
 import { INSTAGRAM_REELS } from "@/lib/constants/instagram"
+import { getClientIp, tooManyRequestsResponse } from "@/lib/auth/manager"
+import { enforceRateLimit } from "@/lib/security/rate-limit"
 
 export const dynamic = "force-dynamic"
 export const revalidate = 3600
@@ -16,9 +18,16 @@ async function getThumbnailUrl(reelUrl: string): Promise<string | null> {
 }
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const ip = getClientIp(request)
+  const allowed = await enforceRateLimit(`instagram:thumb:${ip}`, {
+    limit: 120,
+    windowSeconds: 60 * 60,
+  })
+  if (!allowed) return tooManyRequestsResponse()
+
   const { id } = await params
   const reel = INSTAGRAM_REELS.find((item) => item.id === id)
   if (!reel) {

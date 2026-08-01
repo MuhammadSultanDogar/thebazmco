@@ -1,18 +1,27 @@
-import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 import { loadSiteData, updateSiteData } from "@/lib/store"
+import {
+  assertSameOrigin,
+  noStoreJson,
+  requireManagerAuth,
+} from "@/lib/auth/manager"
+import { secureJson } from "@/lib/security/headers"
+
+export const dynamic = "force-dynamic"
 
 export async function GET() {
   const data = await loadSiteData()
-  return NextResponse.json(data.rates)
+  return NextResponse.json(data.rates, {
+    headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120" },
+  })
 }
 
 export async function POST(request: Request) {
-  const cookieStore = await cookies()
-  const session = cookieStore.get("manager_session")
+  const authError = await requireManagerAuth()
+  if (authError) return authError
 
-  if (!session || session.value !== "authenticated") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  if (!assertSameOrigin(request)) {
+    return secureJson({ error: "Forbidden" }, { status: 403 })
   }
 
   try {
@@ -24,8 +33,8 @@ export async function POST(request: Request) {
         "1.5hours": body["1.5hours"] || site.rates["1.5hours"],
       }
     })
-    return NextResponse.json({ success: true, rates: data.rates })
+    return noStoreJson({ success: true, rates: data.rates })
   } catch {
-    return NextResponse.json({ error: "Invalid request" }, { status: 400 })
+    return secureJson({ error: "Invalid request" }, { status: 400 })
   }
 }

@@ -42,7 +42,7 @@ export function ShopOrdersTab() {
     setLoading(true)
     setFetchError("")
     try {
-      const res = await fetch("/api/orders?all=true", { cache: "no-store" })
+      const res = await fetch("/api/orders", { cache: "no-store" })
       if (!res.ok) {
         setFetchError("Could not load orders. Make sure you are logged in.")
         return

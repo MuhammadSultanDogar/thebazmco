@@ -1,5 +1,13 @@
 import { NextResponse } from "next/server"
 import {
+  assertSameOrigin,
+  getClientIp,
+  requireManagerAuth,
+  tooManyRequestsResponse,
+} from "@/lib/auth/manager"
+import { enforceRateLimit } from "@/lib/security/rate-limit"
+import { secureJson } from "@/lib/security/headers"
+import {
   Document,
   Page,
   Text,
@@ -509,24 +517,42 @@ function InvoicePDF({ data }: { data: InvoiceData }) {
   )
 }
 
+export const dynamic = "force-dynamic"
+
 export async function POST(request: Request) {
+  const authError = await requireManagerAuth()
+  if (authError) return authError
+
+  if (!assertSameOrigin(request)) {
+    return secureJson({ error: "Forbidden" }, { status: 403 })
+  }
+
+  const ip = getClientIp(request)
+  const allowed = await enforceRateLimit(`invoice-pdf:${ip}`, {
+    limit: 30,
+    windowSeconds: 60 * 60,
+  })
+  if (!allowed) return tooManyRequestsResponse()
+
   try {
     const data: InvoiceData = await request.json()
     
     const pdfBuffer = await renderToBuffer(<InvoicePDF data={data} />)
     
-    return new NextResponse(pdfBuffer, {
+    const response = new NextResponse(pdfBuffer, {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="Invoice-${data.invoiceNumber}.pdf"`,
+        "Cache-Control": "no-store",
       },
     })
+    return response
   } catch (error) {
     console.error("PDF generation error:", error)
-    return NextResponse.json(
+    return secureJson(
       { error: "Failed to generate PDF" },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }

@@ -22,7 +22,8 @@ import {
 } from "lucide-react"
 import { InvoiceTemplate } from "@/components/invoice-template"
 import { ShopOrdersTab } from "@/components/manager/shop-orders-tab"
-import { ProductImageInput } from "@/components/manager/product-image-input"
+import { ProductImagesInput } from "@/components/manager/product-images-input"
+import { normalizeMascotProduct } from "@/lib/utils/product-images"
 import { StorageTab } from "@/components/manager/storage-tab"
 import type { MascotProduct, MascotAccessory } from "@/lib/types/mascot"
 
@@ -197,6 +198,7 @@ export default function ManagerPage() {
     description: "",
     price: "",
     image: "",
+    images: [],
     shipping: "",
     accessories: [],
     category: "mascot",
@@ -212,10 +214,11 @@ export default function ManagerPage() {
 
     try {
       const isNew = !editingMascot.id
+      const payload = normalizeMascotProduct(editingMascot)
       const res = await fetch("/api/mascots", {
         method: isNew ? "POST" : "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editingMascot),
+        body: JSON.stringify(payload),
       })
 
       if (res.ok) {
@@ -992,9 +995,15 @@ export default function ManagerPage() {
                       </select>
                     </div>
                     <div className="sm:col-span-2">
-                      <ProductImageInput
-                        value={editingMascot.image}
-                        onChange={(value) => updateMascotField("image", value)}
+                      <ProductImagesInput
+                        images={editingMascot.images ?? (editingMascot.image ? [editingMascot.image] : [])}
+                        onChange={(images) => {
+                          setEditingMascot({
+                            ...editingMascot,
+                            images,
+                            image: images[0] ?? "",
+                          })
+                        }}
                         onError={setError}
                       />
                     </div>

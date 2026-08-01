@@ -19,6 +19,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { compressImage } from "@/lib/utils/compress-image"
+import { CheckoutAccessoryUpsell } from "@/components/shop/checkout-accessory-upsell"
 
 export function CheckoutDialog() {
   const {
@@ -123,6 +124,8 @@ export function CheckoutDialog() {
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-5">
+          <CheckoutAccessoryUpsell />
+
           <div className="p-4 rounded-xl bg-secondary border border-primary/15 space-y-2">
             <div className="flex items-center gap-2 text-primary font-bold text-sm">
               <CreditCard className="w-4 h-4" />
