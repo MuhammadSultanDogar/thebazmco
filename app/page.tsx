@@ -12,8 +12,8 @@ export default function Home() {
     <main className="bg-white">
       <Header />
       <Hero />
-      <StatsStrip />
       <MascotsShop />
+      <StatsStrip />
       <PerformanceSection />
       <FAQ />
       <CTA />

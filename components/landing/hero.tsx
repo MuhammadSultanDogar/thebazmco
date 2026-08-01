@@ -1,55 +1,88 @@
 "use client"
 
 import Image from "next/image"
-import { MessageCircle, Instagram, ArrowDown, ShoppingBag, Sparkles } from "lucide-react"
+import Link from "next/link"
+import { MessageCircle, Instagram, ShoppingBag, Sparkles, Play } from "lucide-react"
+import { INSTAGRAM_REELS } from "@/lib/constants/instagram"
+
+const HOOK_REEL = INSTAGRAM_REELS[0]
 
 export function Hero() {
   return (
-    <section className="relative min-h-[90vh] flex items-center overflow-hidden bg-gradient-to-b from-secondary/80 via-white to-white">
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute -top-20 -right-20 w-96 h-96 bg-primary/8 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 -left-20 w-80 h-80 bg-accent/10 rounded-full blur-3xl" />
+    <section className="relative overflow-hidden bg-white lg:min-h-[90vh] lg:flex lg:items-center">
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute inset-0 bg-gradient-to-b from-[#f5f0ff] via-white to-white lg:from-secondary/50" />
+        <div className="absolute top-0 right-0 w-48 h-48 lg:w-96 lg:h-96 bg-primary/5 rounded-full blur-3xl" />
       </div>
 
-      <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-16">
-        <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+      <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 pt-[4.5rem] pb-6 lg:pt-24 lg:pb-16">
+        <div className="grid lg:grid-cols-2 gap-6 lg:gap-16 items-center">
           <div className="text-center lg:text-left">
-            <p className="inline-flex items-center gap-2 text-primary text-xs sm:text-sm font-semibold tracking-wide uppercase mb-5 px-4 py-2 rounded-full bg-white border border-primary/20 shadow-sm">
-              <ShoppingBag className="w-3.5 h-3.5" />
-              Shop · Perform · Entertain
-            </p>
+            <div className="flex items-start justify-between gap-3 lg:block">
+              <div className="flex-1 min-w-0">
+                <p className="inline-flex items-center gap-1.5 text-primary text-[10px] sm:text-xs font-semibold tracking-wide uppercase mb-3 px-3 py-1.5 rounded-full bg-white border border-primary/15 shadow-sm">
+                  <ShoppingBag className="w-3 h-3" />
+                  Shop · Perform
+                </p>
 
-            <h1 className="headline-display text-4xl sm:text-5xl md:text-6xl lg:text-[4rem] mb-5">
-              <span className="block text-primary">Inflatable</span>
-              <span className="block text-foreground">Mascots</span>
-              <span className="block text-muted-foreground text-3xl sm:text-4xl md:text-[2.75rem] mt-1 font-semibold">
-                & Gorilla Shows
-              </span>
-            </h1>
+                <h1 className="headline-display text-[1.75rem] leading-tight sm:text-5xl md:text-6xl lg:text-[4rem] mb-3 lg:mb-5">
+                  <span className="block text-primary lg:inline lg:mr-2">Inflatable</span>
+                  <span className="block text-foreground lg:inline">Mascots</span>
+                  <span className="hidden lg:block text-muted-foreground text-3xl sm:text-4xl md:text-[2.75rem] mt-1 font-semibold">
+                    & Gorilla Shows
+                  </span>
+                  <span className="lg:hidden block text-muted-foreground text-lg font-semibold mt-0.5">
+                    & Gorilla Shows
+                  </span>
+                </h1>
+              </div>
 
-            <p className="text-base sm:text-lg text-muted-foreground max-w-lg mx-auto lg:mx-0 mb-8 leading-relaxed">
+              <Link
+                href={HOOK_REEL.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="lg:hidden relative shrink-0 w-[4.5rem] aspect-[9/14] rounded-xl overflow-hidden border-2 border-primary/20 shadow-md shadow-primary/10"
+                aria-label="Watch our story on Instagram"
+              >
+                <Image
+                  src={`/api/instagram/thumbnail/${HOOK_REEL.id}`}
+                  alt="TheBazm reel"
+                  fill
+                  unoptimized
+                  className="object-cover"
+                  sizes="72px"
+                  priority
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                <span className="absolute bottom-1 right-1 w-5 h-5 rounded-full bg-white/95 flex items-center justify-center">
+                  <Play className="w-2.5 h-2.5 fill-primary text-primary ml-px" />
+                </span>
+              </Link>
+            </div>
+
+            <p className="hidden sm:block text-base sm:text-lg text-muted-foreground max-w-lg mx-auto lg:mx-0 mb-6 lg:mb-8 leading-relaxed">
               Buy premium inflatable mascots or book live gorilla performances —
               delivered across all cities in Pakistan.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start mb-8">
+            <div className="flex flex-row gap-2 sm:gap-3 justify-center lg:justify-start mb-4 lg:mb-8">
               <a
                 href="#mascots"
-                className="inline-flex items-center justify-center gap-2 px-7 py-3.5 bg-primary text-primary-foreground font-bold rounded-full shadow-md shadow-primary/25 hover:brightness-105 transition-all"
+                className="inline-flex flex-1 sm:flex-none items-center justify-center gap-2 px-4 sm:px-7 py-3 bg-primary text-primary-foreground text-sm font-bold rounded-full shadow-md shadow-primary/20 hover:brightness-105 transition-all"
               >
                 <ShoppingBag className="w-4 h-4" />
-                Shop Mascots
+                Shop
               </a>
               <a
                 href="#performance"
-                className="inline-flex items-center justify-center gap-2 px-7 py-3.5 bg-white text-primary font-bold rounded-full border-2 border-primary/30 hover:bg-secondary transition-all"
+                className="inline-flex flex-1 sm:flex-none items-center justify-center gap-2 px-4 sm:px-7 py-3 bg-white text-primary text-sm font-bold rounded-full border-2 border-primary/25 hover:bg-secondary transition-all"
               >
                 <Sparkles className="w-4 h-4" />
-                Book Performance
+                Book
               </a>
             </div>
 
-            <div className="flex flex-wrap gap-5 justify-center lg:justify-start text-sm">
+            <div className="hidden sm:flex flex-wrap gap-5 justify-center lg:justify-start text-sm">
               <a
                 href="https://wa.me/923255105062"
                 target="_blank"
@@ -71,7 +104,7 @@ export function Hero() {
             </div>
           </div>
 
-          <div className="relative flex justify-center">
+          <div className="relative hidden lg:flex justify-center">
             <div className="relative w-64 h-64 sm:w-80 sm:h-80 animate-float">
               <div className="absolute inset-0 rounded-3xl bg-white border-2 border-primary/15 shadow-xl shadow-primary/10" />
               <div className="absolute inset-4 rounded-2xl overflow-hidden bg-secondary/50">
@@ -90,15 +123,6 @@ export function Hero() {
           </div>
         </div>
       </div>
-
-      <a
-        href="#mascots"
-        className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-1 text-primary/70 hover:text-primary transition-colors"
-        aria-label="Scroll to shop"
-      >
-        <span className="text-[10px] tracking-widest uppercase font-semibold">Shop</span>
-        <ArrowDown className="w-4 h-4 animate-bounce" />
-      </a>
     </section>
   )
 }

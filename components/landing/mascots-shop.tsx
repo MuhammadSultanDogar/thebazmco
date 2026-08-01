@@ -134,9 +134,9 @@ export function MascotsShop() {
   const accessories = list.filter((p) => p.category === "accessory")
 
   return (
-    <section id="mascots" className="py-16 sm:py-24 bg-secondary/50 border-b border-primary/10 scroll-mt-24">
+    <section id="mascots" className="py-8 sm:py-16 lg:py-24 bg-secondary/50 border-b border-primary/10 scroll-mt-20 sm:scroll-mt-24">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <ScrollReveal className="mb-10">
+        <ScrollReveal className="mb-6 lg:mb-10">
           <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
             <div>
               <p className="text-primary text-xs font-bold tracking-[0.2em] uppercase mb-2">

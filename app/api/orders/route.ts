@@ -1,9 +1,7 @@
 import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 import type { ShopOrder, OrderStatus } from "@/lib/types/order"
-
-let orders: ShopOrder[] = []
-let orderCounter = 1
+import { loadSiteData, updateSiteData } from "@/lib/store"
 
 async function isAuthenticated() {
   const cookieStore = await cookies()
@@ -11,18 +9,15 @@ async function isAuthenticated() {
   return session?.value === "authenticated"
 }
 
-function generateOrderNumber() {
-  const num = String(orderCounter++).padStart(3, "0")
-  const year = new Date().getFullYear()
-  return `TBZ-SHOP-${year}-${num}`
-}
-
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const showAll = searchParams.get("all") === "true"
 
   if (showAll && (await isAuthenticated())) {
-    return NextResponse.json([...orders].sort((a, b) => b.createdAt.localeCompare(a.createdAt)))
+    const data = await loadSiteData()
+    return NextResponse.json(
+      [...data.orders].sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    )
   }
 
   return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -40,23 +35,27 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Cart is empty" }, { status: 400 })
     }
 
-    const order: ShopOrder = {
-      id: `order-${Date.now()}`,
-      orderNumber: generateOrderNumber(),
-      createdAt: new Date().toISOString(),
-      customerPhone: body.customerPhone,
-      customerAddress: body.customerAddress,
-      items: body.items,
-      subtotal: body.subtotal,
-      shipping: body.shipping,
-      total: body.total,
-      freeShipping: body.freeShipping ?? false,
-      paymentImage: body.paymentImage,
-      status: "pending_review",
-    }
+    let created: ShopOrder | null = null
+    await updateSiteData((site) => {
+      const order: ShopOrder = {
+        id: `order-${Date.now()}`,
+        orderNumber: `TBZ-SHOP-${new Date().getFullYear()}-${String(site.orderCounter++).padStart(3, "0")}`,
+        createdAt: new Date().toISOString(),
+        customerPhone: body.customerPhone,
+        customerAddress: body.customerAddress,
+        items: body.items,
+        subtotal: body.subtotal,
+        shipping: body.shipping,
+        total: body.total,
+        freeShipping: body.freeShipping ?? false,
+        paymentImage: body.paymentImage,
+        status: "pending_review",
+      }
+      site.orders.unshift(order)
+      created = order
+    })
 
-    orders.unshift(order)
-    return NextResponse.json(order)
+    return NextResponse.json(created)
   } catch {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 })
   }
@@ -69,17 +68,23 @@ export async function PUT(request: Request) {
 
   try {
     const body = await request.json()
-    const index = orders.findIndex((o) => o.id === body.id)
-    if (index === -1) {
+    let updated: ShopOrder | null = null
+
+    await updateSiteData((site) => {
+      const index = site.orders.findIndex((o) => o.id === body.id)
+      if (index === -1) throw new Error("NOT_FOUND")
+      site.orders[index] = {
+        ...site.orders[index],
+        status: body.status as OrderStatus,
+      }
+      updated = site.orders[index]
+    })
+
+    return NextResponse.json(updated)
+  } catch (error) {
+    if (error instanceof Error && error.message === "NOT_FOUND") {
       return NextResponse.json({ error: "Order not found" }, { status: 404 })
     }
-
-    orders[index] = {
-      ...orders[index],
-      status: body.status as OrderStatus,
-    }
-    return NextResponse.json(orders[index])
-  } catch {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 })
   }
 }
@@ -93,6 +98,9 @@ export async function DELETE(request: Request) {
   const id = searchParams.get("id")
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 })
 
-  orders = orders.filter((o) => o.id !== id)
+  await updateSiteData((site) => {
+    site.orders = site.orders.filter((o) => o.id !== id)
+  })
+
   return NextResponse.json({ success: true })
 }

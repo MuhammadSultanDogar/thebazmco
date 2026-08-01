@@ -9,7 +9,7 @@ const stats = [
 
 export function StatsStrip() {
   return (
-    <div className="border-y border-primary/15 bg-secondary py-6">
+    <div className="hidden md:block border-y border-primary/15 bg-secondary py-6">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
           {stats.map((stat) => (
