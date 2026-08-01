@@ -1,0 +1,228 @@
+"use client"
+
+import { useState, useRef } from "react"
+import { Loader2, Upload, CreditCard, MessageCircle, X } from "lucide-react"
+import { useCart } from "@/hooks/use-cart"
+import {
+  PAYMENT_DETAILS,
+  WHATSAPP_NUMBER,
+  formatPrice,
+  buildWhatsAppOrderMessage,
+} from "@/lib/constants/payment"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+import { compressImage } from "@/lib/utils/compress-image"
+
+export function CheckoutDialog() {
+  const {
+    items,
+    subtotal,
+    shipping,
+    total,
+    freeShipping,
+    checkoutOpen,
+    closeCheckout,
+    clearCart,
+  } = useCart()
+
+  const [phone, setPhone] = useState("")
+  const [address, setAddress] = useState("")
+  const [paymentImage, setPaymentImage] = useState<string | null>(null)
+  const [preview, setPreview] = useState<string | null>(null)
+  const [error, setError] = useState("")
+  const [submitting, setSubmitting] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const handleFile = async (file: File | null) => {
+    if (!file) return
+    if (!file.type.startsWith("image/")) {
+      setError("Please upload an image file (JPG, PNG)")
+      return
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      setError("Image must be under 8MB")
+      return
+    }
+
+    try {
+      const compressed = await compressImage(file)
+      setPaymentImage(compressed)
+      setPreview(compressed)
+      setError("")
+    } catch {
+      setError("Failed to process image")
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError("")
+
+    if (!phone.trim()) return setError("Enter your phone number")
+    if (!address.trim()) return setError("Enter your delivery address")
+    if (!paymentImage) return setError("Upload your payment transfer screenshot")
+
+    setSubmitting(true)
+    try {
+      const payload = {
+        customerPhone: phone.trim(),
+        customerAddress: address.trim(),
+        paymentImage,
+        items: items.map(({ product, quantity }) => ({
+          productId: product.id,
+          name: product.name,
+          price: product.price,
+          quantity,
+        })),
+        subtotal,
+        shipping,
+        total,
+        freeShipping,
+      }
+
+      const res = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || "Failed to submit order")
+      }
+
+      const order = await res.json()
+      clearCart()
+      closeCheckout()
+      setPhone("")
+      setAddress("")
+      setPaymentImage(null)
+      setPreview(null)
+
+      const msg = buildWhatsAppOrderMessage(order)
+      window.location.href = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <Dialog open={checkoutOpen} onOpenChange={(open) => !open && closeCheckout()}>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="font-display text-xl">Checkout — 100% Advance</DialogTitle>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="p-4 rounded-xl bg-secondary border border-primary/15 space-y-2">
+            <div className="flex items-center gap-2 text-primary font-bold text-sm">
+              <CreditCard className="w-4 h-4" />
+              Bank Transfer Details
+            </div>
+            <div className="text-sm space-y-1">
+              <p><span className="text-muted-foreground">Name:</span> <strong>{PAYMENT_DETAILS.accountName}</strong></p>
+              <p><span className="text-muted-foreground">Bank:</span> <strong>{PAYMENT_DETAILS.bank}</strong></p>
+              <p><span className="text-muted-foreground">Account:</span> <strong className="text-primary">{PAYMENT_DETAILS.accountNumber}</strong></p>
+            </div>
+            <p className="text-xs text-muted-foreground pt-1 border-t border-primary/10">
+              Transfer the full amount (PKR {formatPrice(total)}) then upload screenshot below.
+            </p>
+          </div>
+
+          <div className="p-3 rounded-xl bg-primary text-primary-foreground text-sm font-medium text-center">
+            Total due now: PKR {formatPrice(total)}
+            {freeShipping && " · Free Shipping ✓"}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1.5">Phone Number *</label>
+            <Input
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="e.g. 0321 1234567"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1.5">Delivery Address *</label>
+            <textarea
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder="Full address with city"
+              required
+              className="w-full min-h-[80px] p-3 bg-input border border-border rounded-lg text-sm resize-y"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1.5">Payment Screenshot *</label>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
+            />
+            {preview ? (
+              <div className="relative rounded-xl overflow-hidden border border-primary/20">
+                <img src={preview} alt="Payment proof" className="w-full max-h-48 object-contain bg-secondary" />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPreview(null)
+                    setPaymentImage(null)
+                    if (fileRef.current) fileRef.current.value = ""
+                  }}
+                  className="absolute top-2 right-2 p-1.5 bg-foreground text-background rounded-full"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                className="w-full py-8 border-2 border-dashed border-primary/30 rounded-xl flex flex-col items-center gap-2 hover:bg-secondary transition-colors"
+              >
+                <Upload className="w-8 h-8 text-primary" />
+                <span className="text-sm font-medium">Upload transfer screenshot</span>
+                <span className="text-xs text-muted-foreground">JPG or PNG, max 5MB</span>
+              </button>
+            )}
+          </div>
+
+          {error && (
+            <p className="text-red-600 text-sm text-center bg-red-50 p-3 rounded-lg">{error}</p>
+          )}
+
+          <Button type="submit" disabled={submitting} className="w-full h-12 font-bold rounded-xl gap-2">
+            {submitting ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Submitting...
+              </>
+            ) : (
+              <>
+                <MessageCircle className="w-4 h-4" />
+                Submit & Open WhatsApp
+              </>
+            )}
+          </Button>
+
+          <p className="text-xs text-center text-muted-foreground">
+            Our team will review your payment in the manager portal before dispatching your order.
+          </p>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
