@@ -2,8 +2,9 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { MessageCircle, Instagram, ShoppingBag, Sparkles, Play } from "lucide-react"
+import { MessageCircle, Instagram, ShoppingBag, Sparkles, Play, Mail } from "lucide-react"
 import { INSTAGRAM_REELS } from "@/lib/constants/instagram"
+import { CONTACT_EMAIL, WHATSAPP_DISPLAY, WHATSAPP_NUMBER, INSTAGRAM_HANDLE, INSTAGRAM_URL } from "@/lib/constants/contact"
 
 const HOOK_REEL = INSTAGRAM_REELS[0]
 
@@ -84,22 +85,29 @@ export function Hero() {
 
             <div className="hidden sm:flex flex-wrap gap-5 justify-center lg:justify-start text-sm">
               <a
-                href="https://wa.me/923255105062"
+                href={`https://wa.me/${WHATSAPP_NUMBER}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary font-medium transition-colors"
               >
                 <MessageCircle className="w-4 h-4" />
-                +92 325 5105062
+                {WHATSAPP_DISPLAY}
               </a>
               <a
-                href="https://instagram.com/thebazm.co"
+                href={`mailto:${CONTACT_EMAIL}`}
+                className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary font-medium transition-colors"
+              >
+                <Mail className="w-4 h-4" />
+                {CONTACT_EMAIL}
+              </a>
+              <a
+                href={INSTAGRAM_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary font-medium transition-colors"
               >
                 <Instagram className="w-4 h-4" />
-                @thebazm.co
+                @{INSTAGRAM_HANDLE}
               </a>
             </div>
           </div>

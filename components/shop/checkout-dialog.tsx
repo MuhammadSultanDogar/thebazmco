@@ -9,6 +9,7 @@ import {
   formatPrice,
   buildWhatsAppOrderMessage,
 } from "@/lib/constants/payment"
+import { CONTACT_EMAIL } from "@/lib/constants/contact"
 import {
   Dialog,
   DialogContent,
@@ -131,6 +132,10 @@ export function CheckoutDialog() {
               <p><span className="text-muted-foreground">Name:</span> <strong>{PAYMENT_DETAILS.accountName}</strong></p>
               <p><span className="text-muted-foreground">Bank:</span> <strong>{PAYMENT_DETAILS.bank}</strong></p>
               <p><span className="text-muted-foreground">Account:</span> <strong className="text-primary">{PAYMENT_DETAILS.accountNumber}</strong></p>
+              <p>
+                <span className="text-muted-foreground">Email:</span>{" "}
+                <a href={`mailto:${CONTACT_EMAIL}`} className="text-primary font-medium hover:underline">{CONTACT_EMAIL}</a>
+              </p>
             </div>
             <p className="text-xs text-muted-foreground pt-1 border-t border-primary/10">
               Transfer the full amount (PKR {formatPrice(total)}) then upload screenshot below.

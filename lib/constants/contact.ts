@@ -1,0 +1,5 @@
+export const CONTACT_EMAIL = "thebazm.co@gmail.com"
+export const WHATSAPP_NUMBER = "923255105062"
+export const WHATSAPP_DISPLAY = "+92 325 5105062"
+export const INSTAGRAM_HANDLE = "thebazm.co"
+export const INSTAGRAM_URL = "https://instagram.com/thebazm.co"

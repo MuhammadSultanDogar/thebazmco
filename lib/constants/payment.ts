@@ -6,7 +6,8 @@ export const PAYMENT_DETAILS = {
 }
 
 export const FREE_SHIPPING_THRESHOLD = 10000
-export const WHATSAPP_NUMBER = "923255105062"
+
+export { CONTACT_EMAIL, WHATSAPP_NUMBER } from "@/lib/constants/contact"
 
 export function parsePrice(value: string): number {
   return parseFloat(value.replace(/,/g, "")) || 0

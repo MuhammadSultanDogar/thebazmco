@@ -5,7 +5,8 @@ import { ShoppingCart, Sparkles, Package, Zap, Truck, CreditCard } from "lucide-
 import useSWR from "swr"
 import type { MascotProduct } from "@/lib/types/mascot"
 import { DEFAULT_PRODUCTS, getProductEmoji } from "@/lib/constants/products"
-import { FREE_SHIPPING_THRESHOLD, formatPrice } from "@/lib/constants/payment"
+import { FREE_SHIPPING_THRESHOLD, formatPrice, PAYMENT_DETAILS } from "@/lib/constants/payment"
+import { CONTACT_EMAIL } from "@/lib/constants/contact"
 import { ScrollReveal } from "@/components/landing/scroll-reveal"
 import { useCart } from "@/hooks/use-cart"
 
@@ -176,11 +177,15 @@ export function MascotsShop() {
         />
 
         <ScrollReveal className="mt-8 p-5 rounded-2xl bg-white border-2 border-primary/15">
-          <p className="text-sm font-bold text-primary mb-2">Payment Details</p>
-          <div className="grid sm:grid-cols-3 gap-2 text-sm">
-            <p><span className="text-muted-foreground">Name:</span> Muhammad Hasaan Dogar</p>
+          <p className="text-sm font-bold text-primary mb-2">Payment & Contact</p>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-2 text-sm">
+            <p><span className="text-muted-foreground">Name:</span> {PAYMENT_DETAILS.accountName}</p>
             <p><span className="text-muted-foreground">Bank:</span> UBL</p>
-            <p><span className="text-muted-foreground">Account:</span> <strong className="text-primary">0711367881131</strong></p>
+            <p><span className="text-muted-foreground">Account:</span> <strong className="text-primary">{PAYMENT_DETAILS.accountNumber}</strong></p>
+            <p>
+              <span className="text-muted-foreground">Email:</span>{" "}
+              <a href={`mailto:${CONTACT_EMAIL}`} className="text-primary font-medium hover:underline">{CONTACT_EMAIL}</a>
+            </p>
           </div>
         </ScrollReveal>
       </div>
