@@ -1,10 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
-import { Eye, Trash2, Truck, Check, X, Loader2 } from "lucide-react"
+import { Eye, Trash2, Truck, Check, X, Loader2, Download } from "lucide-react"
 import type { ShopOrder, OrderStatus } from "@/lib/types/order"
 import { formatPrice } from "@/lib/constants/payment"
+import { countOrdersByStatus, downloadOrdersCsv } from "@/lib/utils/orders-csv"
 
 const statusColors: Record<OrderStatus, string> = {
   pending_review: "bg-orange-100 text-orange-700",
@@ -14,31 +15,56 @@ const statusColors: Record<OrderStatus, string> = {
 }
 
 const statusLabels: Record<OrderStatus, string> = {
-  pending_review: "Pending Review",
+  pending_review: "Pending",
   approved: "Approved",
   dispatched: "Dispatched",
   rejected: "Rejected",
 }
 
+type StatusFilter = "all" | OrderStatus
+
+const filterOptions: { value: StatusFilter; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "pending_review", label: "Pending" },
+  { value: "approved", label: "Approved" },
+  { value: "dispatched", label: "Dispatched" },
+  { value: "rejected", label: "Rejected" },
+]
+
 export function ShopOrdersTab() {
   const [orders, setOrders] = useState<ShopOrder[]>([])
   const [viewing, setViewing] = useState<ShopOrder | null>(null)
   const [loading, setLoading] = useState(true)
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all")
+  const [fetchError, setFetchError] = useState("")
 
   const fetchOrders = async () => {
+    setLoading(true)
+    setFetchError("")
     try {
-      const res = await fetch("/api/orders?all=true")
-      if (res.ok) setOrders(await res.json())
+      const res = await fetch("/api/orders?all=true", { cache: "no-store" })
+      if (!res.ok) {
+        setFetchError("Could not load orders. Make sure you are logged in.")
+        return
+      }
+      setOrders(await res.json())
     } catch {
-      console.error("Failed to fetch orders")
+      setFetchError("Failed to fetch orders.")
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
-    fetchOrders()
+    void fetchOrders()
   }, [])
+
+  const statusCounts = useMemo(() => countOrdersByStatus(orders), [orders])
+
+  const filteredOrders = useMemo(() => {
+    if (statusFilter === "all") return orders
+    return orders.filter((o) => o.status === statusFilter)
+  }, [orders, statusFilter])
 
   const updateStatus = async (order: ShopOrder, status: OrderStatus) => {
     try {
@@ -49,7 +75,7 @@ export function ShopOrdersTab() {
       })
       if (res.ok) {
         const updated = await res.json()
-        setOrders(orders.map((o) => (o.id === order.id ? updated : o)))
+        setOrders((prev) => prev.map((o) => (o.id === order.id ? updated : o)))
         if (viewing?.id === order.id) setViewing(updated)
       }
     } catch {
@@ -62,12 +88,17 @@ export function ShopOrdersTab() {
     try {
       const res = await fetch(`/api/orders?id=${id}`, { method: "DELETE" })
       if (res.ok) {
-        setOrders(orders.filter((o) => o.id !== id))
+        setOrders((prev) => prev.filter((o) => o.id !== id))
         if (viewing?.id === id) setViewing(null)
       }
     } catch {
       console.error("Failed to delete order")
     }
+  }
+
+  const handleExportCsv = () => {
+    const suffix = statusFilter === "all" ? "all" : statusFilter
+    downloadOrdersCsv(filteredOrders, `thebazm-orders-${suffix}`)
   }
 
   if (viewing) {
@@ -162,26 +193,74 @@ export function ShopOrdersTab() {
   return (
     <div className="space-y-4">
       <div className="bg-card rounded-2xl border border-border overflow-hidden">
-        <div className="p-4 border-b border-border flex items-center justify-between">
-          <h2 className="font-semibold">Shop Orders ({orders.length})</h2>
-          <Button size="sm" variant="outline" onClick={fetchOrders}>Refresh</Button>
+        <div className="p-4 border-b border-border space-y-4">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <h2 className="font-semibold">Shop Orders ({orders.length})</h2>
+            <div className="flex gap-2 flex-wrap">
+              <Button size="sm" variant="outline" onClick={() => void fetchOrders()}>
+                Refresh
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleExportCsv}
+                disabled={filteredOrders.length === 0}
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Export CSV
+              </Button>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {filterOptions.map((option) => {
+              const count =
+                option.value === "all"
+                  ? orders.length
+                  : statusCounts[option.value as OrderStatus] ?? 0
+              const active = statusFilter === option.value
+
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setStatusFilter(option.value)}
+                  className={`text-sm px-3 py-1.5 rounded-full border transition-colors ${
+                    active
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-background text-muted-foreground border-border hover:border-primary/40"
+                  }`}
+                >
+                  {option.label} ({count})
+                </button>
+              )
+            })}
+          </div>
         </div>
+
+        {fetchError && (
+          <div className="p-4 text-sm text-red-600 border-b border-border">{fetchError}</div>
+        )}
 
         {loading ? (
           <div className="p-8 text-center">
             <Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" />
           </div>
-        ) : orders.length === 0 ? (
-          <div className="p-8 text-center text-muted-foreground">No shop orders yet.</div>
+        ) : filteredOrders.length === 0 ? (
+          <div className="p-8 text-center text-muted-foreground">
+            {orders.length === 0
+              ? "No shop orders yet."
+              : `No ${statusFilter === "all" ? "" : statusLabels[statusFilter as OrderStatus].toLowerCase()} orders.`}
+          </div>
         ) : (
           <div className="divide-y divide-border">
-            {orders.map((order) => (
+            {filteredOrders.map((order) => (
               <div key={order.id} className="p-4 flex items-center justify-between gap-4 hover:bg-muted/50">
                 <div>
                   <p className="font-medium">{order.orderNumber}</p>
                   <p className="text-sm text-muted-foreground">{order.customerPhone}</p>
                   <p className="text-xs text-muted-foreground">
-                    PKR {formatPrice(order.total)} · {order.items.length} item(s)
+                    {new Date(order.createdAt).toLocaleString()} · PKR {formatPrice(order.total)} · {order.items.length} item(s)
                   </p>
                 </div>
                 <div className="flex items-center gap-2">

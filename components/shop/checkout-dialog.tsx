@@ -52,7 +52,7 @@ export function CheckoutDialog() {
     }
 
     try {
-      const compressed = await compressImage(file)
+      const compressed = await compressImage(file, 900, 0.68)
       setPaymentImage(compressed)
       setPreview(compressed)
       setError("")

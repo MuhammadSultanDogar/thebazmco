@@ -1,94 +1,86 @@
-import { mkdir, readFile, writeFile } from "fs/promises"
-import path from "path"
 import type { SiteData, StorageBackend, StorageInfo } from "@/lib/types/site-data"
 import { createDefaultSiteData, normalizeSiteData } from "@/lib/store/defaults"
+import { readFromLocalFile, writeToLocalFile } from "@/lib/store/local-file"
+import {
+  loadOrdersFromStore,
+  migrateLegacyOrdersIfNeeded,
+  saveOrders,
+} from "@/lib/store/orders"
 import {
   getRedis,
   getRedisAuthLabel,
   isRedisConfigured,
-  REDIS_KEY,
+  ORDERS_KEY,
+  SITE_DATA_KEY,
   testRedisConnection,
 } from "@/lib/store/redis-client"
 
-const LOCAL_DATA_PATH = path.join(process.cwd(), ".data", "site-data.json")
+type SiteConfig = Omit<SiteData, "orders">
 
-let memoryStore: SiteData | null = null
-let memoryLoaded = false
 let lastBackend: StorageBackend = "memory"
 let lastDataSizeBytes: number | null = null
 
-async function readFromRedis(): Promise<SiteData | null> {
+async function readRawFromRedis(): Promise<Partial<SiteData> | null> {
   const redis = getRedis()
   if (!redis) return null
 
   try {
-    const stored = await redis.get<SiteData>(REDIS_KEY)
-    if (!stored) return null
-
-    const parsed = normalizeSiteData(stored)
-    lastBackend = "upstash-redis"
-    lastDataSizeBytes = Buffer.byteLength(JSON.stringify(stored), "utf-8")
-    return parsed
+    return await redis.get<Partial<SiteData>>(SITE_DATA_KEY)
   } catch (error) {
-    console.error("Redis read failed:", error)
+    console.error("Redis raw read failed:", error)
     return null
   }
 }
 
-async function redisHasData(): Promise<boolean> {
+async function readConfigFromRedis(): Promise<SiteConfig | null> {
+  const stored = await readRawFromRedis()
+  if (!stored) return null
+
+  const normalized = normalizeSiteData(stored)
+  const { orders: _orders, ...config } = normalized
+  return config
+}
+
+async function writeConfigToRedis(config: SiteConfig) {
+  const redis = getRedis()
+  if (!redis) throw new Error("Redis not configured")
+
+  const payload = { ...config, orders: [] }
+  await redis.set(SITE_DATA_KEY, payload)
+  lastBackend = "upstash-redis"
+  lastDataSizeBytes = Buffer.byteLength(JSON.stringify(payload), "utf-8")
+}
+
+async function redisHasAnyData(): Promise<boolean> {
   const redis = getRedis()
   if (!redis) return false
 
   try {
-    return (await redis.exists(REDIS_KEY)) === 1
+    const [siteExists, ordersExist] = await Promise.all([
+      redis.exists(SITE_DATA_KEY),
+      redis.exists(ORDERS_KEY),
+    ])
+    return siteExists === 1 || ordersExist === 1
   } catch {
     return false
   }
 }
 
-async function writeToRedis(data: SiteData) {
-  const redis = getRedis()
-  if (!redis) throw new Error("Redis not configured")
-
-  const payload = JSON.stringify(data)
-  await redis.set(REDIS_KEY, data)
-  lastBackend = "upstash-redis"
-  lastDataSizeBytes = Buffer.byteLength(payload, "utf-8")
-}
-
-async function readFromLocalFile(): Promise<SiteData | null> {
-  try {
-    const raw = await readFile(LOCAL_DATA_PATH, "utf-8")
-    const parsed = normalizeSiteData(JSON.parse(raw) as Partial<SiteData>)
-    lastBackend = "local-file"
-    lastDataSizeBytes = Buffer.byteLength(raw, "utf-8")
-    return parsed
-  } catch {
-    return null
-  }
-}
-
-async function writeToLocalFile(data: SiteData) {
-  await mkdir(path.dirname(LOCAL_DATA_PATH), { recursive: true })
-  const payload = JSON.stringify(data, null, 2)
-  await writeFile(LOCAL_DATA_PATH, payload, "utf-8")
-  lastBackend = "local-file"
-  lastDataSizeBytes = Buffer.byteLength(payload, "utf-8")
-}
-
-async function persist(data: SiteData) {
+async function persistConfig(config: SiteConfig) {
   const next = {
-    ...data,
+    ...config,
     updatedAt: new Date().toISOString(),
   }
 
   if (isRedisConfigured()) {
-    await writeToRedis(next)
+    await writeConfigToRedis(next)
     return next
   }
 
   if (process.env.NODE_ENV !== "production") {
-    await writeToLocalFile(next)
+    const orders = await loadOrdersFromStore()
+    await writeToLocalFile({ ...next, orders })
+    lastBackend = "local-file"
     return next
   }
 
@@ -96,51 +88,71 @@ async function persist(data: SiteData) {
   return next
 }
 
-export async function loadSiteData(): Promise<SiteData> {
-  if (memoryStore && memoryLoaded) {
-    return structuredClone(memoryStore)
-  }
-
+async function loadConfig(): Promise<SiteConfig> {
   if (isRedisConfigured()) {
-    const stored = await readFromRedis()
+    const stored = await readConfigFromRedis()
     if (stored) {
-      memoryStore = stored
-      memoryLoaded = true
-      return structuredClone(stored)
+      lastBackend = "upstash-redis"
+      return stored
     }
 
-    if (!(await redisHasData())) {
-      const defaults = await persist(createDefaultSiteData())
-      memoryStore = defaults
-      memoryLoaded = true
-      return structuredClone(defaults)
+    if (!(await redisHasAnyData())) {
+      const defaults = createDefaultSiteData()
+      const { orders: _orders, ...config } = defaults
+      return persistConfig(config)
     }
 
-    console.error("Site data key exists but could not be read")
+    console.error("Site config key exists but could not be read")
   } else if (process.env.NODE_ENV !== "production") {
     const local = await readFromLocalFile()
     if (local) {
-      memoryStore = local
-      memoryLoaded = true
-      return structuredClone(local)
+      lastBackend = "local-file"
+      const { orders: _orders, ...config } = local
+      return config
     }
 
-    const defaults = await persist(createDefaultSiteData())
-    memoryStore = defaults
-    memoryLoaded = true
-    return structuredClone(defaults)
+    const defaults = createDefaultSiteData()
+    const { orders: _orders, ...config } = defaults
+    await persistConfig(config)
+    return config
   }
 
-  memoryStore = createDefaultSiteData()
-  memoryLoaded = true
   lastBackend = "memory"
-  return structuredClone(memoryStore)
+  const { orders: _orders, ...config } = createDefaultSiteData()
+  return config
+}
+
+export async function loadSiteData(): Promise<SiteData> {
+  const config = await loadConfig()
+  let orders = await loadOrdersFromStore()
+
+  if (isRedisConfigured() && orders.length === 0) {
+    const raw = await readRawFromRedis()
+    const legacyOrders = Array.isArray(raw?.orders) ? raw.orders : []
+    if (legacyOrders.length > 0) {
+      orders = await migrateLegacyOrdersIfNeeded(legacyOrders)
+    }
+  }
+
+  return normalizeSiteData({ ...config, orders })
+}
+
+export async function loadSiteConfig(): Promise<SiteConfig> {
+  return loadConfig()
+}
+
+export async function saveSiteConfig(config: SiteConfig): Promise<SiteConfig> {
+  return persistConfig(config)
 }
 
 export async function saveSiteData(data: SiteData): Promise<SiteData> {
-  const saved = await persist(data)
-  memoryStore = structuredClone(saved)
-  memoryLoaded = true
+  const normalized = normalizeSiteData(data)
+  const { orders, ...config } = normalized
+  const savedConfig = await persistConfig(config)
+  await saveOrders(orders, savedConfig)
+
+  const saved = { ...savedConfig, orders }
+  lastDataSizeBytes = Buffer.byteLength(JSON.stringify(saved), "utf-8")
   return structuredClone(saved)
 }
 
@@ -168,7 +180,7 @@ function buildHelpSteps(redisReachable: boolean): string[] {
   return [
     "In Vercel: open your project → Storage → Create → Upstash Redis (or KV).",
     "Connect the database to this project (Production + Preview).",
-    "Vercel adds UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN automatically.",
+    "Vercel adds KV_REST_API_URL and KV_REST_API_TOKEN automatically.",
     "Redeploy, then refresh this tab — Database reachable should show Yes.",
   ]
 }
@@ -188,7 +200,7 @@ export async function getStorageInfo(): Promise<StorageInfo> {
   }
 
   if (hasRedis && redisTest.ok) {
-    const exists = await redisHasData()
+    const exists = await redisHasAnyData()
     return {
       backend: "upstash-redis",
       persistent: true,

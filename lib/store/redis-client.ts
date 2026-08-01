@@ -1,6 +1,7 @@
 import { Redis } from "@upstash/redis"
+import { ORDERS_KEY, SITE_DATA_KEY } from "@/lib/store/redis-keys"
 
-export const REDIS_KEY = "thebazm:site-data"
+export { ORDERS_KEY, SITE_DATA_KEY }
 
 export function isRedisConfigured() {
   const hasUpstash =
