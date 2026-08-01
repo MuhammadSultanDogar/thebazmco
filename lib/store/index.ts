@@ -1,77 +1,59 @@
 import { mkdir, readFile, writeFile } from "fs/promises"
 import path from "path"
-import { head, list, put } from "@vercel/blob"
 import type { SiteData, StorageBackend, StorageInfo } from "@/lib/types/site-data"
 import { createDefaultSiteData, normalizeSiteData } from "@/lib/store/defaults"
+import {
+  getRedis,
+  getRedisAuthLabel,
+  isRedisConfigured,
+  REDIS_KEY,
+  testRedisConnection,
+} from "@/lib/store/redis-client"
 
-const BLOB_PATH = "thebazm-site-data.json"
 const LOCAL_DATA_PATH = path.join(process.cwd(), ".data", "site-data.json")
 
 let memoryStore: SiteData | null = null
 let memoryLoaded = false
 let lastBackend: StorageBackend = "memory"
-let lastBlobSizeBytes: number | null = null
+let lastDataSizeBytes: number | null = null
 
-function blobToken() {
-  return process.env.BLOB_READ_WRITE_TOKEN
-}
-
-function useBlob() {
-  return Boolean(blobToken())
-}
-
-function blobOptions() {
-  return { token: blobToken() }
-}
-
-async function readFromBlob(): Promise<SiteData | null> {
-  if (!useBlob()) return null
+async function readFromRedis(): Promise<SiteData | null> {
+  const redis = getRedis()
+  if (!redis) return null
 
   try {
-    const { blobs } = await list({ prefix: "thebazm", limit: 20, ...blobOptions() })
-    const match = blobs.find((blob) => blob.pathname === BLOB_PATH)
-    if (!match) return null
+    const stored = await redis.get<SiteData>(REDIS_KEY)
+    if (!stored) return null
 
-    lastBlobSizeBytes = match.size
-
-    const meta = await head(match.url, blobOptions())
-    const res = await fetch(meta.downloadUrl, {
-      headers: { Authorization: `Bearer ${blobToken()}` },
-      cache: "no-store",
-    })
-
-    if (!res.ok) {
-      console.error("Blob download failed:", res.status, res.statusText)
-      return null
-    }
-
-    const parsed = normalizeSiteData((await res.json()) as Partial<SiteData>)
-    lastBackend = "vercel-blob"
+    const parsed = normalizeSiteData(stored)
+    lastBackend = "upstash-redis"
+    lastDataSizeBytes = Buffer.byteLength(JSON.stringify(stored), "utf-8")
     return parsed
   } catch (error) {
-    console.error("Blob read failed:", error)
+    console.error("Redis read failed:", error)
     return null
   }
 }
 
-async function blobExists(): Promise<boolean> {
-  if (!useBlob()) return false
-  const { blobs } = await list({ prefix: "thebazm", limit: 20, ...blobOptions() })
-  return blobs.some((blob) => blob.pathname === BLOB_PATH)
+async function redisHasData(): Promise<boolean> {
+  const redis = getRedis()
+  if (!redis) return false
+
+  try {
+    return (await redis.exists(REDIS_KEY)) === 1
+  } catch {
+    return false
+  }
 }
 
-async function writeToBlob(data: SiteData) {
+async function writeToRedis(data: SiteData) {
+  const redis = getRedis()
+  if (!redis) throw new Error("Redis not configured")
+
   const payload = JSON.stringify(data)
-  const result = await put(BLOB_PATH, payload, {
-    access: "private",
-    addRandomSuffix: false,
-    allowOverwrite: true,
-    contentType: "application/json",
-    ...blobOptions(),
-  })
-  lastBlobSizeBytes = payload.length
-  lastBackend = "vercel-blob"
-  return result
+  await redis.set(REDIS_KEY, data)
+  lastBackend = "upstash-redis"
+  lastDataSizeBytes = Buffer.byteLength(payload, "utf-8")
 }
 
 async function readFromLocalFile(): Promise<SiteData | null> {
@@ -79,7 +61,7 @@ async function readFromLocalFile(): Promise<SiteData | null> {
     const raw = await readFile(LOCAL_DATA_PATH, "utf-8")
     const parsed = normalizeSiteData(JSON.parse(raw) as Partial<SiteData>)
     lastBackend = "local-file"
-    lastBlobSizeBytes = Buffer.byteLength(raw, "utf-8")
+    lastDataSizeBytes = Buffer.byteLength(raw, "utf-8")
     return parsed
   } catch {
     return null
@@ -91,7 +73,7 @@ async function writeToLocalFile(data: SiteData) {
   const payload = JSON.stringify(data, null, 2)
   await writeFile(LOCAL_DATA_PATH, payload, "utf-8")
   lastBackend = "local-file"
-  lastBlobSizeBytes = Buffer.byteLength(payload, "utf-8")
+  lastDataSizeBytes = Buffer.byteLength(payload, "utf-8")
 }
 
 async function persist(data: SiteData) {
@@ -100,8 +82,8 @@ async function persist(data: SiteData) {
     updatedAt: new Date().toISOString(),
   }
 
-  if (useBlob()) {
-    await writeToBlob(next)
+  if (isRedisConfigured()) {
+    await writeToRedis(next)
     return next
   }
 
@@ -119,22 +101,22 @@ export async function loadSiteData(): Promise<SiteData> {
     return structuredClone(memoryStore)
   }
 
-  if (useBlob()) {
-    const stored = await readFromBlob()
+  if (isRedisConfigured()) {
+    const stored = await readFromRedis()
     if (stored) {
       memoryStore = stored
       memoryLoaded = true
       return structuredClone(stored)
     }
 
-    if (!(await blobExists())) {
+    if (!(await redisHasData())) {
       const defaults = await persist(createDefaultSiteData())
       memoryStore = defaults
       memoryLoaded = true
       return structuredClone(defaults)
     }
 
-    console.error("Site data blob exists but could not be read")
+    console.error("Site data key exists but could not be read")
   } else if (process.env.NODE_ENV !== "production") {
     const local = await readFromLocalFile()
     if (local) {
@@ -178,26 +160,65 @@ export async function replaceSiteData(raw: Partial<SiteData>): Promise<SiteData>
   return saveSiteData(merged)
 }
 
+function buildHelpSteps(redisReachable: boolean): string[] {
+  if (isRedisConfigured() && redisReachable) {
+    return ["Storage is working. Download a backup occasionally for extra safety."]
+  }
+
+  return [
+    "In Vercel: open your project → Storage → Create → Upstash Redis (or KV).",
+    "Connect the database to this project (Production + Preview).",
+    "Vercel adds UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN automatically.",
+    "Redeploy, then refresh this tab — Database reachable should show Yes.",
+  ]
+}
+
 export async function getStorageInfo(): Promise<StorageInfo> {
   const data = await loadSiteData()
+  const authLabel = getRedisAuthLabel()
+  const hasRedis = isRedisConfigured()
+  const redisTest = hasRedis ? await testRedisConnection() : { ok: false as const }
+  const vercelEnv = process.env.VERCEL_ENV ?? null
 
-  if (useBlob()) {
-    const exists = await blobExists()
+  const counts = {
+    mascots: data.mascots.length,
+    activeMascots: data.mascots.filter((m) => m.active).length,
+    orders: data.orders.length,
+    invoices: data.invoices.length,
+  }
+
+  if (hasRedis && redisTest.ok) {
+    const exists = await redisHasData()
     return {
-      backend: "vercel-blob",
+      backend: "upstash-redis",
       persistent: true,
       configured: true,
       updatedAt: data.updatedAt ?? null,
-      blobSizeBytes: lastBlobSizeBytes,
-      counts: {
-        mascots: data.mascots.length,
-        activeMascots: data.mascots.filter((m) => m.active).length,
-        orders: data.orders.length,
-        invoices: data.invoices.length,
-      },
+      dataSizeBytes: lastDataSizeBytes,
+      connectionLabel: authLabel,
+      databaseReachable: true,
+      vercelEnv,
+      counts,
       message: exists
-        ? "Connected to Vercel Blob. Data persists across deploys."
-        : "Blob token found. Waiting for first save to create storage file.",
+        ? `Redis connected (${authLabel}). Data persists across deploys.`
+        : "Redis connected. Save a product or rate to create the storage record.",
+      helpSteps: buildHelpSteps(true),
+    }
+  }
+
+  if (hasRedis && !redisTest.ok) {
+    return {
+      backend: "upstash-redis",
+      persistent: false,
+      configured: true,
+      updatedAt: data.updatedAt ?? null,
+      dataSizeBytes: lastDataSizeBytes,
+      connectionLabel: authLabel,
+      databaseReachable: false,
+      vercelEnv,
+      counts,
+      message: `Redis configured (${authLabel}) but connection failed: ${redisTest.error}`,
+      helpSteps: buildHelpSteps(false),
     }
   }
 
@@ -207,14 +228,15 @@ export async function getStorageInfo(): Promise<StorageInfo> {
       persistent: true,
       configured: true,
       updatedAt: data.updatedAt ?? null,
-      blobSizeBytes: lastBlobSizeBytes,
-      counts: {
-        mascots: data.mascots.length,
-        activeMascots: data.mascots.filter((m) => m.active).length,
-        orders: data.orders.length,
-        invoices: data.invoices.length,
-      },
-      message: "Using local .data/site-data.json on this machine (dev only).",
+      dataSizeBytes: lastDataSizeBytes,
+      connectionLabel: authLabel,
+      databaseReachable: false,
+      vercelEnv,
+      counts,
+      message: "Using local .data/site-data.json (dev only).",
+      helpSteps: [
+        "For production, add Upstash Redis via Vercel Storage and redeploy.",
+      ],
     }
   }
 
@@ -223,15 +245,13 @@ export async function getStorageInfo(): Promise<StorageInfo> {
     persistent: false,
     configured: false,
     updatedAt: data.updatedAt ?? null,
-    blobSizeBytes: null,
-    counts: {
-      mascots: data.mascots.length,
-      activeMascots: data.mascots.filter((m) => m.active).length,
-      orders: data.orders.length,
-      invoices: data.invoices.length,
-    },
-    message:
-      "NOT PERSISTENT — add Vercel Blob storage or data will reset on every deploy.",
+    dataSizeBytes: null,
+    connectionLabel: authLabel,
+    databaseReachable: false,
+    vercelEnv,
+    counts,
+    message: "NOT PERSISTENT — add Upstash Redis in Vercel Storage, then redeploy.",
+    helpSteps: buildHelpSteps(false),
   }
 }
 

@@ -19,14 +19,17 @@ export type SiteData = {
   updatedAt: string
 }
 
-export type StorageBackend = "vercel-blob" | "local-file" | "memory"
+export type StorageBackend = "upstash-redis" | "local-file" | "memory"
 
 export type StorageInfo = {
   backend: StorageBackend
   persistent: boolean
   configured: boolean
   updatedAt: string | null
-  blobSizeBytes: number | null
+  dataSizeBytes: number | null
+  connectionLabel: string | null
+  databaseReachable: boolean
+  vercelEnv: string | null
   counts: {
     mascots: number
     activeMascots: number
@@ -34,4 +37,5 @@ export type StorageInfo = {
     invoices: number
   }
   message: string
+  helpSteps: string[]
 }

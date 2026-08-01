@@ -146,16 +146,13 @@ export function StorageTab() {
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {[
             { label: "Backend", value: info?.backend ?? "—" },
+            { label: "Vercel env", value: info?.vercelEnv ?? "local" },
+            { label: "Connection", value: info?.connectionLabel ?? "Not found" },
+            { label: "Database reachable", value: info?.databaseReachable ? "Yes" : "No" },
             { label: "Last saved", value: formatDate(info?.updatedAt ?? null) },
-            { label: "Store size", value: formatBytes(info?.blobSizeBytes ?? null) },
+            { label: "Store size", value: formatBytes(info?.dataSizeBytes ?? null) },
             { label: "Products", value: String(info?.counts.mascots ?? 0) },
-            { label: "Active products", value: String(info?.counts.activeMascots ?? 0) },
             { label: "Shop orders", value: String(info?.counts.orders ?? 0) },
-            { label: "Invoices", value: String(info?.counts.invoices ?? 0) },
-            {
-              label: "Configured",
-              value: info?.configured ? "Yes" : "No",
-            },
           ].map((item) => (
             <div key={item.label} className="rounded-xl border border-border p-4 bg-background">
               <p className="text-xs uppercase tracking-wide text-muted-foreground">{item.label}</p>
@@ -164,14 +161,13 @@ export function StorageTab() {
           ))}
         </div>
 
-        {!info?.persistent && (
+        {!info?.persistent && info?.helpSteps && info.helpSteps.length > 0 && (
           <div className="rounded-xl border border-primary/20 bg-secondary/50 p-4 text-sm space-y-2">
-            <p className="font-semibold text-primary">Enable permanent storage (free on Vercel)</p>
-            <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
-              <li>Open your project on vercel.com</li>
-              <li>Go to Storage → Create → Blob</li>
-              <li>Connect it to this project</li>
-              <li>Redeploy — Vercel adds BLOB_READ_WRITE_TOKEN automatically</li>
+            <p className="font-semibold text-primary">How to fix this</p>
+            <ol className="list-decimal list-inside space-y-1.5 text-muted-foreground">
+              {info.helpSteps.map((step) => (
+                <li key={step}>{step}</li>
+              ))}
             </ol>
           </div>
         )}
