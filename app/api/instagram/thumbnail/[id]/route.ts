@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { INSTAGRAM_REELS } from "@/lib/constants/instagram"
 
+export const dynamic = "force-dynamic"
 export const revalidate = 3600
 
 async function getThumbnailUrl(reelUrl: string): Promise<string | null> {

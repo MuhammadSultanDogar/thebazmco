@@ -3,8 +3,8 @@ import { InstagramGallery } from "@/components/landing/instagram-gallery"
 import { ScrollReveal } from "@/components/landing/scroll-reveal"
 import { fetchReelPreviews } from "@/lib/instagram/reels"
 
-export async function Gallery() {
-  const reels = await fetchReelPreviews()
+export function Gallery() {
+  const reels = fetchReelPreviews()
 
   return (
     <div id="reels" className="py-16 sm:py-20 bg-white border-t border-primary/10 scroll-mt-24">
