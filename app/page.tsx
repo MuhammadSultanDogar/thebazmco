@@ -16,8 +16,8 @@ export default function Home() {
       <Hero />
       <MascotsShop />
       <StatsStrip />
-      <FAQ />
       <PerformanceSection />
+      <FAQ />
       <CTA />
       <Footer />
     </main>

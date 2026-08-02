@@ -3,13 +3,14 @@
 import Image from "next/image"
 import Link from "next/link"
 import { useState, useEffect } from "react"
-import { MessageCircle, Menu, X, ShoppingBag, Instagram, HelpCircle, ShoppingCart } from "lucide-react"
+import { MessageCircle, Menu, X, ShoppingBag, Instagram, HelpCircle, ShoppingCart, Sparkles } from "lucide-react"
 import { useCart } from "@/hooks/use-cart"
 
 const navLinks = [
   { href: "#mascots", label: "Shop", icon: ShoppingBag },
-  { href: "#faq", label: "FAQ", icon: HelpCircle },
+  { href: "#performance", label: "Performances", icon: Sparkles },
   { href: "#reels", label: "Reels", icon: Instagram },
+  { href: "#faq", label: "FAQ", icon: HelpCircle },
 ]
 
 export function Header() {
