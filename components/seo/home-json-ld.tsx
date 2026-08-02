@@ -12,12 +12,19 @@ export async function HomeJsonLd() {
     "@context": "https://schema.org",
     "@type": "Organization",
     name: SITE_NAME,
+    alternateName: "TheBazm Mascot Shop",
     url: SITE_URL,
     logo: `${SITE_URL}/favicon.ico`,
     description: SITE_DESCRIPTION,
     email: CONTACT_EMAIL,
     telephone: WHATSAPP_DISPLAY,
     sameAs: ["https://instagram.com/thebazm.co"],
+    knowsAbout: [
+      "Inflatable mascot costumes",
+      "Gorilla mascot sales",
+      "Online mascot shop Pakistan",
+      "Costume accessories",
+    ],
     areaServed: {
       "@type": "Country",
       name: "Pakistan",
@@ -26,7 +33,7 @@ export async function HomeJsonLd() {
 
   const store = {
     "@context": "https://schema.org",
-    "@type": "Store",
+    "@type": ["Store", "OnlineStore"],
     name: `${SITE_NAME} — Inflatable Mascot Shop`,
     url: SITE_URL,
     description: SITE_DESCRIPTION,

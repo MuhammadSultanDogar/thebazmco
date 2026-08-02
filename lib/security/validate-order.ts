@@ -3,6 +3,7 @@ import type { OrderLineItem } from "@/lib/types/order"
 import type { PreOrderSettings } from "@/lib/types/pre-order"
 import { FREE_SHIPPING_THRESHOLD, parsePrice } from "@/lib/constants/payment"
 import { isProductSoldOut } from "@/lib/utils/product-availability"
+import { calculatePreOrderPayment } from "@/lib/utils/pre-order-payment"
 import { isDataUrl } from "@/lib/utils/compress-image"
 
 type OrderPayload = {
@@ -128,9 +129,8 @@ export function validateOrderPayload(
   }
 
   const totals = calculateTotals(resolvedItems)
-  const isPreOrder = preOrder.enabled
-  const amountDueNow = isPreOrder ? preOrder.advanceAmount : totals.total
-  const balanceDue = isPreOrder ? Math.max(0, totals.total - amountDueNow) : 0
+  const preOrderPayment = calculatePreOrderPayment(resolvedItems, preOrder, totals.total)
+  const { isPreOrder, amountDueNow, balanceDue } = preOrderPayment
 
   if (body.subtotal !== undefined && body.subtotal !== totals.subtotal) {
     return { ok: false, error: "Subtotal mismatch — refresh and try again" }

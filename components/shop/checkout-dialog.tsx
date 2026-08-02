@@ -32,8 +32,10 @@ export function CheckoutDialog() {
     closeCheckout,
     clearCart,
     isPreOrder,
+    mascotUnits,
     amountDueNow,
     balanceDue,
+    preOrder,
   } = useCart()
 
   const [phone, setPhone] = useState("")
@@ -149,13 +151,18 @@ export function CheckoutDialog() {
             </div>
             <p className="text-xs text-muted-foreground pt-1 border-t border-primary/10">
               {isPreOrder
-                ? `Transfer PKR ${formatPrice(amountDueNow)} advance now, then upload screenshot below. Balance PKR ${formatPrice(balanceDue)} due before dispatch.`
+                ? `Transfer PKR ${formatPrice(amountDueNow)} advance (${mascotUnits} mascot${mascotUnits !== 1 ? "s" : ""} × PKR ${formatPrice(preOrder.advanceAmount)}), then upload screenshot. Balance PKR ${formatPrice(balanceDue)} due before dispatch.`
                 : `Transfer the full amount (PKR ${formatPrice(total)}) then upload screenshot below.`}
             </p>
           </div>
 
           <div className="p-3 rounded-xl bg-primary text-primary-foreground text-sm font-medium text-center space-y-1">
             <p>Pay now: PKR {formatPrice(amountDueNow)}</p>
+            {isPreOrder && mascotUnits > 0 && (
+              <p className="text-xs opacity-90">
+                {mascotUnits} mascot{mascotUnits !== 1 ? "s" : ""} × PKR {formatPrice(preOrder.advanceAmount)} advance each
+              </p>
+            )}
             {isPreOrder && balanceDue > 0 && (
               <p className="text-xs opacity-90">
                 Pre-order total PKR {formatPrice(total)} · Balance PKR {formatPrice(balanceDue)} later

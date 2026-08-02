@@ -22,7 +22,7 @@ const inter = Inter({
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: `${SITE_NAME} | Buy Inflatable Mascots Online in Pakistan`,
+    default: `${SITE_NAME} | Inflatable Mascot Shop — Buy Online in Pakistan`,
     template: `%s | ${SITE_NAME}`,
   },
   description: SITE_DESCRIPTION,

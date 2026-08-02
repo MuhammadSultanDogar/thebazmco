@@ -923,29 +923,57 @@ export default function ManagerPage() {
           <div className="space-y-6">
             {!showMascotForm ? (
               <>
-                <div className="bg-card rounded-2xl p-6 border border-border space-y-4">
-                  <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <h2 className="font-semibold">Pre-order mode</h2>
-                      <p className="text-sm text-muted-foreground">
-                        Customers pay advance now and reserve stock before it arrives.
-                      </p>
+                <div className="bg-card rounded-2xl p-6 border-2 border-border space-y-4">
+                  <div
+                    className={`rounded-xl p-4 border-2 ${
+                      preOrder.enabled
+                        ? "border-amber-400/60 bg-amber-50"
+                        : "border-green-200 bg-green-50"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-4 flex-wrap">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <h2 className="font-semibold">Pre-order mode</h2>
+                          <span
+                            className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                              preOrder.enabled
+                                ? "bg-amber-500 text-white"
+                                : "bg-green-600 text-white"
+                            }`}
+                          >
+                            {preOrder.enabled ? "Live on site" : "Turned off"}
+                          </span>
+                        </div>
+                        <p className="text-sm text-muted-foreground max-w-xl">
+                          {preOrder.enabled
+                            ? "Customers see flash sale + pre-order checkout. Advance is charged per mascot in cart."
+                            : "Normal shop mode — 100% advance at checkout. Flash sale hidden. Toggle back on anytime without losing settings."}
+                        </p>
+                      </div>
+                      <label className="flex items-center gap-3 cursor-pointer shrink-0 px-4 py-2 rounded-xl border border-border bg-white">
+                        <span className="text-sm font-semibold">
+                          {preOrder.enabled ? "ON" : "OFF"}
+                        </span>
+                        <input
+                          type="checkbox"
+                          checked={preOrder.enabled}
+                          onChange={(e) =>
+                            setPreOrder({ ...preOrder, enabled: e.target.checked })
+                          }
+                          className="w-5 h-5 accent-primary"
+                        />
+                      </label>
                     </div>
-                    <label className="flex items-center gap-2 cursor-pointer shrink-0">
-                      <input
-                        type="checkbox"
-                        checked={preOrder.enabled}
-                        onChange={(e) =>
-                          setPreOrder({ ...preOrder, enabled: e.target.checked })
-                        }
-                        className="w-4 h-4 accent-primary"
-                      />
-                      <span className="text-sm font-medium">Enabled</span>
-                    </label>
                   </div>
+                  <p className="text-xs text-muted-foreground">
+                    Turn pre-order <strong>OFF</strong> when stock arrives — no code changes needed. Save below to apply on the live site.
+                  </p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium mb-2">Advance (PKR)</label>
+                      <label className="block text-sm font-medium mb-2">
+                        Advance per mascot (PKR)
+                      </label>
                       <Input
                         type="number"
                         value={preOrder.advanceAmount}

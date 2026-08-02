@@ -1,10 +1,10 @@
 "use client"
 
 const stats = [
-  { value: "100+", label: "Events Delivered" },
-  { value: "7", label: "Products Available" },
-  { value: "All Cities", label: "Nationwide Delivery" },
-  { value: "24/7", label: "WhatsApp Support" },
+  { value: "Nationwide", label: "Delivery Across Pakistan" },
+  { value: "Shop", label: "Inflatable Mascots & Accessories" },
+  { value: "PKR 10k", label: "Pre-order Advance Per Mascot" },
+  { value: "24/7", label: "WhatsApp Order Support" },
 ]
 
 export function StatsStrip() {

@@ -13,6 +13,7 @@ import {
 } from "@/lib/constants/contact"
 import { HeroMobileScene } from "@/components/landing/hero-mobile-scene"
 import { HeroMobileTicker } from "@/components/landing/hero-mobile-ticker"
+import { HeroFlashSale } from "@/components/landing/hero-flash-sale"
 
 const HOOK_REEL = INSTAGRAM_REELS[0]
 
@@ -27,6 +28,8 @@ export function Hero() {
         </div>
 
         <div className="relative z-10 flex flex-col px-4 sm:px-6 pb-5 pt-1 bg-white">
+          <HeroFlashSale />
+
           <p className="inline-flex items-center gap-1.5 self-start text-primary text-[10px] font-semibold tracking-[0.18em] uppercase mb-3 px-3 py-1.5 rounded-full bg-white/90 border border-primary/15 shadow-sm backdrop-blur-sm">
             <ShoppingBag className="w-3 h-3" />
             Mascot Shop Pakistan
@@ -104,6 +107,8 @@ export function Hero() {
         <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-16 w-full">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div className="text-left">
+              <HeroFlashSale />
+
               <p className="inline-flex items-center gap-1.5 text-primary text-xs font-semibold tracking-wide uppercase mb-3 px-3 py-1.5 rounded-full bg-white border border-primary/15 shadow-sm">
                 <ShoppingBag className="w-3 h-3" />
                 Pakistan&apos;s Mascot Shop

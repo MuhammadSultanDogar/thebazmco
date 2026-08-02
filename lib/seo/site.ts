@@ -2,19 +2,20 @@ export const SITE_URL = "https://www.thebazm.co"
 export const SITE_NAME = "TheBazm"
 export const SITE_TAGLINE = "Pakistan's inflatable mascot shop"
 export const SITE_DESCRIPTION =
-  "Buy premium inflatable mascots, gorilla costumes, and accessories online. Nationwide delivery across Pakistan. Batteries, chargers, and costume add-ons available."
+  "TheBazm (thebazm.co) is Pakistan's online shop for inflatable gorilla, panda, and teddy mascots — buy costumes with batteries, chargers, and accessories. Nationwide delivery. We sell mascots; live performances are not our main service."
 
 export const SEO_KEYWORDS = [
-  "inflatable mascot Pakistan",
-  "buy gorilla mascot costume",
+  "buy inflatable mascot Pakistan",
+  "inflatable gorilla costume for sale",
+  "mascot shop Pakistan",
+  "thebazm.co shop",
   "inflatable costume shop Pakistan",
   "mascot costume delivery",
-  "gorilla inflatable mascot",
+  "gorilla inflatable mascot buy online",
   "panda mascot costume Pakistan",
-  "event mascot for sale",
-  "TheBazm",
-  "thebazm.co",
+  "inflatable mascot Islamabad",
+  "inflatable mascot Lahore",
+  "TheBazm mascot shop",
   "inflatable accessories battery charger",
-  "mascot shop Islamabad",
   "mascot shop nationwide Pakistan",
 ]

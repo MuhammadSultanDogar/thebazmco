@@ -196,7 +196,7 @@ export function ProductDetailModal({
               )}
               {preOrder.enabled && !soldOut && (
                 <p className="text-xs text-primary font-medium mt-2">
-                  PKR {preOrder.advanceAmount.toLocaleString("en-PK")} advance reserves your piece · ~{preOrder.etaDays} days
+                  PKR {preOrder.advanceAmount.toLocaleString("en-PK")} advance per mascot · +PKR {preOrder.advanceAmount.toLocaleString("en-PK")} for each extra · ~{preOrder.etaDays} days
                 </p>
               )}
             </div>

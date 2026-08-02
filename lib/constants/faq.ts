@@ -1,5 +1,10 @@
 export const FAQ_ITEMS = [
   {
+    question: "Does TheBazm sell inflatable mascots or only do performances?",
+    answer:
+      "TheBazm primarily sells inflatable mascots and accessories online at thebazm.co with delivery across Pakistan. We are a mascot shop, not a performance booking agency. Older social media reels may show gorilla acts, but our main business is retail costume sales.",
+  },
+  {
     question: "Where can I buy inflatable mascots in Pakistan?",
     answer:
       "TheBazm (thebazm.co) sells premium inflatable mascots and accessories online with delivery across all major cities in Pakistan. Browse gorillas, pandas, teddies, batteries, and chargers on our shop page.",
@@ -17,12 +22,12 @@ export const FAQ_ITEMS = [
   {
     question: "What payment methods do you accept?",
     answer:
-      "We accept bank transfer (UBL). During pre-order, pay PKR 10,000 advance to reserve your piece; the balance is due before dispatch. When pre-order is off, 100% advance is required. Account details are on checkout.",
+      "We accept bank transfer (UBL). During pre-order, pay PKR 10,000 advance per mascot reserved (+ PKR 10,000 for each additional mascot). Balance is due before dispatch. When pre-order is off, 100% advance is required.",
   },
   {
     question: "How do pre-orders work at TheBazm?",
     answer:
-      "When stock is incoming, we open pre-orders at special prices. Pay PKR 10,000 advance online to reserve your mascot or accessory. We hold your order until stock arrives (typically within ~10 days). Balance is paid before shipping.",
+      "When stock is incoming, we open pre-orders at special prices. Pay PKR 10,000 advance per mascot online to reserve — each extra mascot adds another PKR 10,000 advance. We hold your order until stock arrives (typically within ~10 days). Balance is paid before shipping.",
   },
   {
     question: "What accessories do you sell with mascots?",
@@ -32,7 +37,7 @@ export const FAQ_ITEMS = [
   {
     question: "Can I book a live gorilla performance?",
     answer:
-      "Performances are available on request. Our main focus is selling inflatable mascots nationwide. Contact us on WhatsApp for performance availability in Islamabad and Rawalpindi.",
+      "No — TheBazm is focused on selling inflatable mascot costumes. We do not actively book live performers. Buy a gorilla, panda, or teddy mascot from our shop for your own events.",
   },
   {
     question: "How far in advance should I order a mascot?",

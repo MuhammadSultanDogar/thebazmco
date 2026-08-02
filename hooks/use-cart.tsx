@@ -13,6 +13,7 @@ import type { CartItem } from "@/lib/types/order"
 import type { MascotProduct } from "@/lib/types/mascot"
 import { calculateOrderTotals } from "@/lib/constants/payment"
 import { isProductSoldOut } from "@/lib/utils/product-availability"
+import { calculatePreOrderPayment } from "@/lib/utils/pre-order-payment"
 import { DEFAULT_PRE_ORDER } from "@/lib/types/pre-order"
 import type { PreOrderSettings } from "@/lib/types/pre-order"
 
@@ -25,6 +26,7 @@ type CartContextValue = {
   freeShipping: boolean
   amountToFreeShipping: number
   preOrder: PreOrderSettings
+  mascotUnits: number
   amountDueNow: number
   balanceDue: number
   isPreOrder: boolean
@@ -111,9 +113,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const totals = useMemo(() => calculateOrderTotals(items), [items])
   const itemCount = useMemo(() => items.reduce((s, i) => s + i.quantity, 0), [items])
   const amountToFreeShipping = Math.max(0, 10000 - totals.subtotal)
-  const isPreOrder = preOrder.enabled && items.length > 0
-  const amountDueNow = isPreOrder ? preOrder.advanceAmount : totals.total
-  const balanceDue = isPreOrder ? Math.max(0, totals.total - amountDueNow) : 0
+  const preOrderPayment = useMemo(
+    () => calculatePreOrderPayment(items, preOrder, totals.total),
+    [items, preOrder, totals.total],
+  )
 
   const value: CartContextValue = {
     items,
@@ -124,9 +127,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     freeShipping: totals.freeShipping,
     amountToFreeShipping,
     preOrder,
-    amountDueNow,
-    balanceDue,
-    isPreOrder,
+    mascotUnits: preOrderPayment.mascotUnits,
+    amountDueNow: preOrderPayment.amountDueNow,
+    balanceDue: preOrderPayment.balanceDue,
+    isPreOrder: preOrderPayment.isPreOrder,
     setPreOrderSettings,
     addItem,
     removeItem,

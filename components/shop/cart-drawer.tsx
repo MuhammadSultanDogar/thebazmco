@@ -24,6 +24,7 @@ export function CartDrawer() {
     freeShipping,
     amountToFreeShipping,
     isPreOrder,
+    mascotUnits,
     amountDueNow,
     balanceDue,
     isOpen,
@@ -31,6 +32,7 @@ export function CartDrawer() {
     openCheckout,
     removeItem,
     updateQuantity,
+    preOrder,
   } = useCart()
 
   return (
@@ -152,6 +154,11 @@ export function CartDrawer() {
                 )}
                 {isPreOrder && (
                   <p className="text-xs text-primary font-medium">
+                    {mascotUnits} mascot{mascotUnits !== 1 ? "s" : ""} × PKR {formatPrice(preOrder.advanceAmount)} advance
+                  </p>
+                )}
+                {isPreOrder && (
+                  <p className="text-xs text-muted-foreground">
                     Pre-order total: PKR {formatPrice(total)} (incl. shipping when applicable)
                   </p>
                 )}
