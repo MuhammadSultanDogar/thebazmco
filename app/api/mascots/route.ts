@@ -41,6 +41,8 @@ export async function GET(request: Request) {
         category: normalized.category || "mascot",
         featured: normalized.featured,
         active: normalized.active,
+        soldOut: normalized.soldOut,
+        originalPrice: normalized.originalPrice,
         sortOrder: normalized.sortOrder,
       }
     })
@@ -88,6 +90,8 @@ export async function POST(request: Request) {
         category: body.category || "mascot",
         featured: body.featured ?? false,
         active: body.active ?? true,
+        soldOut: body.soldOut ?? false,
+        originalPrice: body.originalPrice,
         sortOrder: site.mascots.length + 1,
       })
       site.mascots.push(created)

@@ -1,16 +1,20 @@
 "use client"
 
 import { useState } from "react"
-import Image from "next/image"
-import { ShoppingCart, Sparkles, Zap, Truck, CreditCard } from "lucide-react"
+import { ShoppingCart, Sparkles, Zap, Truck, CreditCard, CalendarClock } from "lucide-react"
 import useSWR from "swr"
 import type { MascotProduct } from "@/lib/types/mascot"
 import { DEFAULT_PRODUCTS, getProductEmoji } from "@/lib/constants/products"
 import { FREE_SHIPPING_THRESHOLD, formatPrice, PAYMENT_DETAILS } from "@/lib/constants/payment"
 import { CONTACT_EMAIL } from "@/lib/constants/contact"
 import { getProductImages, getProductPrimaryImage } from "@/lib/utils/product-images"
+import { isProductSoldOut } from "@/lib/utils/product-availability"
+import { SmartProductImage } from "@/components/shop/smart-product-image"
 import { ScrollReveal } from "@/components/landing/scroll-reveal"
 import { ProductDetailModal } from "@/components/shop/product-detail-modal"
+import { PreOrderBanner } from "@/components/shop/pre-order-banner"
+import { ProductPrice } from "@/components/shop/product-price"
+import { useShopSettings } from "@/hooks/use-shop-settings"
 import { useCart } from "@/hooks/use-cart"
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
@@ -38,21 +42,19 @@ function ProductImage({
   }
 
   return (
-    <>
-      <Image
+    <div className={`absolute inset-0 ${className}`}>
+      <SmartProductImage
         src={image}
         alt={product.name}
-        fill
-        unoptimized={image.startsWith("data:image/")}
-        className={`object-cover transition-transform duration-500 group-hover:scale-105 ${className}`}
         sizes="(max-width: 768px) 50vw, 25vw"
+        containerAspect={4 / 3}
       />
       {imageCount > 1 && (
         <span className="absolute bottom-2 right-2 text-[10px] font-bold bg-black/55 text-white px-2 py-0.5 rounded-full">
           +{imageCount - 1}
         </span>
       )}
-    </>
+    </div>
   )
 }
 
@@ -64,32 +66,53 @@ function ProductCard({
   onOpen: (product: MascotProduct) => void
 }) {
   const { addItem } = useCart()
+  const { preOrder } = useShopSettings()
+  const soldOut = isProductSoldOut(product)
 
   return (
     <article
-      className={`group flex flex-col rounded-2xl overflow-hidden bg-white border-2 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl cursor-pointer ${
-        product.featured
+      className={`group flex flex-col rounded-2xl overflow-hidden bg-white border-2 transition-all duration-300 ${
+        soldOut
+          ? "border-muted opacity-90 cursor-default"
+          : "hover:-translate-y-1 hover:shadow-xl cursor-pointer"
+      } ${
+        !soldOut && product.featured
           ? "border-primary shadow-lg shadow-primary/15"
-          : "border-primary/10 hover:border-primary/40 hover:shadow-primary/10"
+          : !soldOut
+            ? "border-primary/10 hover:border-primary/40 hover:shadow-primary/10"
+            : "border-primary/10"
       }`}
-      onClick={() => onOpen(product)}
+      onClick={() => !soldOut && onOpen(product)}
       onKeyDown={(e) => {
+        if (soldOut) return
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault()
           onOpen(product)
         }
       }}
       role="button"
-      tabIndex={0}
+      tabIndex={soldOut ? -1 : 0}
+      aria-disabled={soldOut}
     >
       <div className="relative aspect-[4/3] w-full overflow-hidden bg-secondary">
-        {product.featured && (
+        {soldOut && (
+          <span className="absolute top-2 left-2 z-10 inline-flex items-center gap-1 bg-foreground/85 text-background text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full shadow">
+            Sold Out
+          </span>
+        )}
+        {!soldOut && product.featured && (
           <span className="absolute top-2 left-2 z-10 inline-flex items-center gap-1 bg-primary text-primary-foreground text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full shadow">
             <Sparkles className="w-3 h-3" />
             Best Seller
           </span>
         )}
-        <ProductImage product={product} />
+        {!soldOut && preOrder.enabled && (
+          <span className="absolute top-2 right-2 z-10 inline-flex items-center gap-1 bg-amber-500 text-white text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full shadow">
+            <CalendarClock className="w-3 h-3" />
+            Pre-order
+          </span>
+        )}
+        <ProductImage product={product} className={soldOut ? "opacity-60 grayscale-[0.35]" : ""} />
       </div>
 
       <div className="flex flex-col flex-1 p-4 sm:p-5">
@@ -103,26 +126,29 @@ function ProductCard({
         <div className="flex items-end justify-between gap-2 mb-4">
           <div>
             <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">
-              Price
+              {preOrder.enabled && !soldOut ? "Pre-order price" : "Price"}
             </p>
-            <p className="font-display text-xl sm:text-2xl font-bold text-primary">
-              {product.price}{" "}
-              <span className="text-sm font-semibold text-muted-foreground">PKR</span>
-            </p>
+            <ProductPrice product={product} size="sm" />
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation()
-            addItem(product)
-          }}
-          className="inline-flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-primary text-primary-foreground text-sm font-bold rounded-xl hover:brightness-105 transition-colors"
-        >
-          <ShoppingCart className="w-4 h-4" />
-          Add to Cart
-        </button>
+        {soldOut ? (
+          <div className="inline-flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-muted text-muted-foreground text-sm font-bold rounded-xl border border-border">
+            Currently unavailable
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              addItem(product)
+            }}
+            className="inline-flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-primary text-primary-foreground text-sm font-bold rounded-xl hover:brightness-105 transition-colors"
+          >
+            <ShoppingCart className="w-4 h-4" />
+            {preOrder.enabled ? "Pre-order" : "Add to Cart"}
+          </button>
+        )}
       </div>
     </article>
   )
@@ -170,6 +196,7 @@ function ProductGrid({
 export function MascotsShop() {
   const [detailProduct, setDetailProduct] = useState<MascotProduct | null>(null)
   const { addItem } = useCart()
+  const { preOrder } = useShopSettings()
 
   const { data: products } = useSWR<MascotProduct[]>("/api/mascots", fetcher, {
     fallbackData: DEFAULT_PRODUCTS,
@@ -206,11 +233,17 @@ export function MascotsShop() {
                 </div>
                 <div className="flex items-center gap-2 px-4 py-3 bg-primary/10 text-primary border border-primary/20 rounded-xl text-sm font-medium">
                   <CreditCard className="w-4 h-4 shrink-0" />
-                  <span>100% advance payment required</span>
+                  <span>
+                    {preOrder.enabled
+                      ? `Pre-order: PKR ${formatPrice(preOrder.advanceAmount)} advance to reserve`
+                      : "100% advance payment required"}
+                  </span>
                 </div>
               </div>
             </div>
           </ScrollReveal>
+
+          <PreOrderBanner />
 
           <ProductGrid
             title="Inflatable Mascots"

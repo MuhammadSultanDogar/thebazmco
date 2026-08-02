@@ -2,6 +2,7 @@ export interface MascotAccessory {
   id: string
   name: string
   price: string
+  soldOut?: boolean
 }
 
 export type MascotCategory = "mascot" | "accessory"
@@ -20,6 +21,9 @@ export interface MascotProduct {
   category: MascotCategory
   featured: boolean
   active: boolean
+  soldOut?: boolean
+  /** Shown crossed out during pre-order when set */
+  originalPrice?: string
   sortOrder: number
 }
 
@@ -40,4 +44,5 @@ export const createEmptyProduct = (): Omit<MascotProduct, "id" | "sortOrder"> =>
   category: "mascot",
   featured: false,
   active: true,
+  soldOut: false,
 })

@@ -26,10 +26,14 @@ export function forbiddenResponse(message = "Forbidden") {
   return NextResponse.json({ error: message }, { status: 403 })
 }
 
-export function tooManyRequestsResponse() {
+export function tooManyRequestsResponse(message?: string) {
   return NextResponse.json(
-    { error: "Too many requests. Please try again later." },
-    { status: 429, headers: { "Retry-After": "60" } },
+    {
+      error:
+        message ??
+        "Too many requests. Please wait a few minutes and try again.",
+    },
+    { status: 429, headers: { "Retry-After": "600" } },
   )
 }
 

@@ -23,6 +23,9 @@ export function CartDrawer() {
     total,
     freeShipping,
     amountToFreeShipping,
+    isPreOrder,
+    amountDueNow,
+    balanceDue,
     isOpen,
     closeCart,
     openCheckout,
@@ -138,12 +141,23 @@ export function CartDrawer() {
                   </span>
                 </div>
                 <div className="flex justify-between text-base font-bold pt-1 border-t border-primary/10">
-                  <span>Total (100% Advance)</span>
-                  <span className="text-primary">PKR {formatPrice(total)}</span>
+                  <span>{isPreOrder ? "Due now (advance)" : "Total (100% Advance)"}</span>
+                  <span className="text-primary">PKR {formatPrice(amountDueNow)}</span>
                 </div>
+                {isPreOrder && balanceDue > 0 && (
+                  <div className="flex justify-between text-sm text-muted-foreground">
+                    <span>Balance before dispatch</span>
+                    <span>PKR {formatPrice(balanceDue)}</span>
+                  </div>
+                )}
+                {isPreOrder && (
+                  <p className="text-xs text-primary font-medium">
+                    Pre-order total: PKR {formatPrice(total)} (incl. shipping when applicable)
+                  </p>
+                )}
               </div>
               <Button onClick={openCheckout} className="w-full h-12 font-bold rounded-xl">
-                Proceed to Checkout
+                {isPreOrder ? "Reserve with Advance" : "Proceed to Checkout"}
               </Button>
             </div>
           </>

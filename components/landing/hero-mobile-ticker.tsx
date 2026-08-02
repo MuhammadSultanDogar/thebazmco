@@ -1,11 +1,11 @@
 const TICKER_ITEMS = [
   "Limited Stock",
   "24/7 Support",
-  "Free Shipping",
-  "Performed in 100+ Events",
+  "Free Shipping Above PKR 10,000",
   "Selling Inflatable Mascots",
-  "Across All Pakistan",
-  "In All Cities",
+  "Nationwide Delivery",
+  "All Cities in Pakistan",
+  "Batteries & Accessories",
 ]
 
 export function HeroMobileTicker() {

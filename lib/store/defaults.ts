@@ -1,5 +1,7 @@
 import { DEFAULT_PRODUCTS } from "@/lib/constants/products"
+import { DEFAULT_PRE_ORDER } from "@/lib/types/pre-order"
 import type { SiteData } from "@/lib/types/site-data"
+import type { PreOrderSettings } from "@/lib/types/pre-order"
 import { normalizeMascotList } from "@/lib/utils/product-images"
 
 export const DEFAULT_TERMS = `A 50% advance payment is required to confirm the booking.
@@ -21,14 +23,28 @@ export const DEFAULT_RATES = {
 
 export function createDefaultSiteData(): SiteData {
   return {
-    mascots: DEFAULT_PRODUCTS.map((product) => ({ ...product })),
+    mascots: DEFAULT_PRODUCTS.map((product) => ({ ...product, soldOut: product.soldOut ?? false })),
     rates: { ...DEFAULT_RATES },
     terms: DEFAULT_TERMS,
+    preOrder: { ...DEFAULT_PRE_ORDER },
     orders: [],
     invoices: [],
     orderCounter: 1,
     invoiceCounter: 1,
     updatedAt: new Date().toISOString(),
+  }
+}
+
+function normalizePreOrder(raw: Partial<PreOrderSettings> | undefined): PreOrderSettings {
+  const defaults = DEFAULT_PRE_ORDER
+  if (!raw) return { ...defaults }
+
+  return {
+    enabled: raw.enabled ?? defaults.enabled,
+    etaDays: raw.etaDays ?? defaults.etaDays,
+    advanceAmount: raw.advanceAmount ?? defaults.advanceAmount,
+    headline: raw.headline?.trim() || defaults.headline,
+    details: raw.details?.trim() || defaults.details,
   }
 }
 
@@ -42,6 +58,7 @@ export function normalizeSiteData(raw: Partial<SiteData> | null | undefined): Si
       : defaults.mascots,
     rates: raw.rates ?? defaults.rates,
     terms: raw.terms ?? defaults.terms,
+    preOrder: normalizePreOrder(raw.preOrder),
     orders: Array.isArray(raw.orders) ? raw.orders : defaults.orders,
     invoices: Array.isArray(raw.invoices) ? raw.invoices : defaults.invoices,
     orderCounter: raw.orderCounter ?? defaults.orderCounter,

@@ -6,6 +6,7 @@ import {
   getSessionCookieOptions,
   safeCompare,
   SESSION_COOKIE_NAME,
+  SessionNotConfiguredError,
   verifySessionToken,
 } from "@/lib/auth/session"
 import {
@@ -13,10 +14,19 @@ import {
   getClientIp,
   tooManyRequestsResponse,
 } from "@/lib/auth/manager"
-import { enforceRateLimit } from "@/lib/security/rate-limit"
+import {
+  clearRateLimit,
+  isRateLimited,
+  recordRateLimitFailure,
+} from "@/lib/security/rate-limit"
 import { secureJson } from "@/lib/security/headers"
 
 export const dynamic = "force-dynamic"
+
+const LOGIN_RATE_LIMIT = {
+  limit: 15,
+  windowSeconds: 10 * 60,
+}
 
 export async function POST(request: Request) {
   if (!assertSameOrigin(request)) {
@@ -24,11 +34,13 @@ export async function POST(request: Request) {
   }
 
   const ip = getClientIp(request)
-  const allowed = await enforceRateLimit(`auth:login:${ip}`, {
-    limit: 10,
-    windowSeconds: 15 * 60,
-  })
-  if (!allowed) return tooManyRequestsResponse()
+  const rateKey = `auth:login:${ip}`
+
+  if (await isRateLimited(rateKey, LOGIN_RATE_LIMIT)) {
+    return tooManyRequestsResponse(
+      "Too many failed login attempts. Wait 10 minutes and try again.",
+    )
+  }
 
   try {
     const body = await request.json()
@@ -38,16 +50,32 @@ export async function POST(request: Request) {
     if (
       typeof username === "string" &&
       typeof password === "string" &&
-      safeCompare(username, creds.username) &&
+      safeCompare(username.trim(), creds.username) &&
       safeCompare(password, creds.password)
     ) {
-      const cookieStore = await cookies()
-      cookieStore.set(SESSION_COOKIE_NAME, createSessionToken(), getSessionCookieOptions())
-      return secureJson({ success: true })
+      try {
+        const cookieStore = await cookies()
+        cookieStore.set(SESSION_COOKIE_NAME, createSessionToken(), getSessionCookieOptions())
+        await clearRateLimit(rateKey)
+        return secureJson({ success: true })
+      } catch (error) {
+        if (error instanceof SessionNotConfiguredError) {
+          return secureJson(
+            {
+              error:
+                "Login blocked: MANAGER_SESSION_SECRET is not set on the server. Add it in Vercel → Settings → Environment Variables, then redeploy.",
+            },
+            { status: 503 },
+          )
+        }
+        throw error
+      }
     }
 
+    await recordRateLimitFailure(rateKey, LOGIN_RATE_LIMIT)
     return secureJson({ error: "Invalid credentials" }, { status: 401 })
-  } catch {
+  } catch (error) {
+    console.error("Auth login error:", error)
     return secureJson({ error: "Invalid request" }, { status: 400 })
   }
 }

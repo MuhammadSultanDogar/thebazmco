@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Plus_Jakarta_Sans, Inter } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { AppProviders } from '@/components/providers/app-providers'
+import { SEO_KEYWORDS, SITE_DESCRIPTION, SITE_NAME, SITE_URL } from '@/lib/seo/site'
 import './globals.css'
 
 const jakarta = Plus_Jakarta_Sans({
@@ -19,22 +20,44 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: 'TheBazm | Gorilla Performances & Inflatable Mascots',
-  description: 'Premium gorilla performances and inflatable mascot costumes in Islamabad & Rawalpindi. Book events or shop mascots — gorillas, pandas, teddies & more.',
-  generator: 'v0.app',
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: `${SITE_NAME} | Buy Inflatable Mascots Online in Pakistan`,
+    template: `%s | ${SITE_NAME}`,
+  },
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  authors: [{ name: SITE_NAME, url: SITE_URL }],
+  creator: SITE_NAME,
+  publisher: SITE_NAME,
+  category: 'shopping',
+  alternates: {
+    canonical: SITE_URL,
+  },
   openGraph: {
-    title: 'TheBazm 🦍 | Performances & Mascots',
-    description: 'Book premium gorilla performances or shop inflatable mascots for your next event.',
+    title: `${SITE_NAME} | Inflatable Mascot Shop Pakistan`,
+    description: SITE_DESCRIPTION,
     type: 'website',
     locale: 'en_PK',
-    siteName: 'TheBazm',
+    siteName: SITE_NAME,
+    url: SITE_URL,
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'TheBazm 🦍 | Performances & Mascots',
-    description: 'Book premium gorilla performances or shop inflatable mascots for your next event.',
+    title: `${SITE_NAME} | Inflatable Mascot Shop`,
+    description: SITE_DESCRIPTION,
   },
-  keywords: ['gorilla performance', 'inflatable mascot', 'event entertainment', 'Islamabad events', 'Rawalpindi events', 'mascot costume Pakistan', 'TheBazm'],
+  keywords: SEO_KEYWORDS,
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
 }
 
 export const viewport: Viewport = {

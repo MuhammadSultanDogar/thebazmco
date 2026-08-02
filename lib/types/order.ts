@@ -9,6 +9,8 @@ export interface OrderLineItem {
   quantity: number
 }
 
+export type ShopOrderType = "standard" | "pre_order"
+
 export interface ShopOrder {
   id: string
   orderNumber: string
@@ -22,6 +24,11 @@ export interface ShopOrder {
   freeShipping: boolean
   paymentImage: string
   status: OrderStatus
+  orderType?: ShopOrderType
+  /** Amount paid at checkout (full total or pre-order advance) */
+  amountDueNow?: number
+  /** Remaining balance before dispatch (pre-orders only) */
+  balanceDue?: number
 }
 
 export interface CartItem {

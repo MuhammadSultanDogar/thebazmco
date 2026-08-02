@@ -1,11 +1,14 @@
 "use client"
 
 import { useState } from "react"
-import Image from "next/image"
-import { ChevronLeft, ChevronRight, ShoppingCart, Sparkles, X } from "lucide-react"
+import { ChevronLeft, ChevronRight, ShoppingCart, Sparkles, X, CalendarClock } from "lucide-react"
 import type { MascotProduct } from "@/lib/types/mascot"
 import { getProductEmoji } from "@/lib/constants/products"
 import { getProductImages } from "@/lib/utils/product-images"
+import { isProductSoldOut } from "@/lib/utils/product-availability"
+import { SmartProductImage } from "@/components/shop/smart-product-image"
+import { ProductPrice } from "@/components/shop/product-price"
+import { useShopSettings } from "@/hooks/use-shop-settings"
 import {
   Dialog,
   DialogContent,
@@ -27,6 +30,8 @@ export function ProductDetailModal({
   onAddToCart,
 }: ProductDetailModalProps) {
   const [activeIndex, setActiveIndex] = useState(0)
+  const { preOrder } = useShopSettings()
+  const soldOut = product ? isProductSoldOut(product) : false
 
   if (!product) return null
 
@@ -71,14 +76,14 @@ export function ProductDetailModal({
           <div className="relative aspect-[4/3] sm:aspect-[16/10] w-full overflow-hidden bg-secondary">
             {hasImages ? (
               <>
-                <Image
+                <SmartProductImage
+                  key={images[safeIndex]}
                   src={images[safeIndex]}
                   alt={`${product.name} photo ${safeIndex + 1}`}
-                  fill
-                  unoptimized={images[safeIndex].startsWith("data:image/")}
-                  className="object-cover"
                   sizes="(max-width: 768px) 100vw, 768px"
                   priority
+                  preferContain
+                  containerAspect={16 / 10}
                 />
                 {images.length > 1 && (
                   <>
@@ -123,10 +128,21 @@ export function ProductDetailModal({
               </div>
             )}
 
-            {product.featured && (
+            {soldOut && (
+              <span className="absolute top-3 left-3 inline-flex items-center gap-1 bg-foreground/85 text-background text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full shadow">
+                Sold Out
+              </span>
+            )}
+            {!soldOut && product.featured && (
               <span className="absolute top-3 left-3 inline-flex items-center gap-1 bg-primary text-primary-foreground text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full shadow">
                 <Sparkles className="w-3 h-3" />
                 Best Seller
+              </span>
+            )}
+            {!soldOut && preOrder.enabled && (
+              <span className="absolute top-3 right-12 inline-flex items-center gap-1 bg-amber-500 text-white text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full shadow">
+                <CalendarClock className="w-3 h-3" />
+                Pre-order
               </span>
             )}
           </div>
@@ -142,13 +158,12 @@ export function ProductDetailModal({
                     i === safeIndex ? "border-primary shadow-md" : "border-transparent opacity-70"
                   }`}
                 >
-                  <Image
+                  <SmartProductImage
                     src={src}
                     alt=""
-                    fill
-                    unoptimized={src.startsWith("data:image/")}
-                    className="object-cover"
                     sizes="64px"
+                    containerAspect={1}
+                    preferContain
                   />
                 </button>
               ))}
@@ -171,29 +186,37 @@ export function ProductDetailModal({
           <div className="flex items-end justify-between gap-4 pt-2 border-t border-primary/10">
             <div>
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">
-                Price
+                {preOrder.enabled && !soldOut ? "Pre-order price" : "Price"}
               </p>
-              <p className="font-display text-3xl font-bold text-primary">
-                {product.price}{" "}
-                <span className="text-base font-semibold text-muted-foreground">PKR</span>
-              </p>
+              <ProductPrice product={product} size="lg" />
               {product.shipping && product.shipping !== "0" && (
                 <p className="text-xs text-muted-foreground mt-1">
                   + PKR {product.shipping} shipping
                 </p>
               )}
+              {preOrder.enabled && !soldOut && (
+                <p className="text-xs text-primary font-medium mt-2">
+                  PKR {preOrder.advanceAmount.toLocaleString("en-PK")} advance reserves your piece · ~{preOrder.etaDays} days
+                </p>
+              )}
             </div>
-            <Button
-              size="lg"
-              className="rounded-xl font-bold gap-2 shrink-0"
-              onClick={() => {
-                onAddToCart(product)
-                onClose()
-              }}
-            >
-              <ShoppingCart className="w-4 h-4" />
-              Add to Cart
-            </Button>
+            {soldOut ? (
+              <Button size="lg" disabled className="rounded-xl font-bold shrink-0">
+                Sold Out
+              </Button>
+            ) : (
+              <Button
+                size="lg"
+                className="rounded-xl font-bold gap-2 shrink-0"
+                onClick={() => {
+                  onAddToCart(product)
+                  onClose()
+                }}
+              >
+                <ShoppingCart className="w-4 h-4" />
+                {preOrder.enabled ? "Pre-order" : "Add to Cart"}
+              </Button>
+            )}
           </div>
         </div>
       </DialogContent>

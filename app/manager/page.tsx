@@ -26,6 +26,8 @@ import { ProductImagesInput } from "@/components/manager/product-images-input"
 import { normalizeMascotProduct } from "@/lib/utils/product-images"
 import { StorageTab } from "@/components/manager/storage-tab"
 import type { MascotProduct, MascotAccessory } from "@/lib/types/mascot"
+import type { PreOrderSettings } from "@/lib/types/pre-order"
+import { DEFAULT_PRE_ORDER } from "@/lib/types/pre-order"
 
 
 interface Invoice {
@@ -94,6 +96,9 @@ export default function ManagerPage() {
   const [editingMascot, setEditingMascot] = useState<MascotProduct | null>(null)
   const [showMascotForm, setShowMascotForm] = useState(false)
   const [isSavingMascot, setIsSavingMascot] = useState(false)
+  const [preOrder, setPreOrder] = useState<PreOrderSettings>(DEFAULT_PRE_ORDER)
+  const [isSavingPreOrder, setIsSavingPreOrder] = useState(false)
+  const [togglingSoldOutId, setTogglingSoldOutId] = useState<string | null>(null)
 
   // Invoices
   const [invoices, setInvoices] = useState<Invoice[]>([])
@@ -129,6 +134,7 @@ export default function ManagerPage() {
     fetchInvoices()
     fetchTerms()
     fetchMascots()
+    fetchShopSettings()
   }, [])
 
   // Auto-calculate subtotal when rate or travel cost changes
@@ -192,6 +198,65 @@ export default function ManagerPage() {
     }
   }
 
+  const fetchShopSettings = async () => {
+    try {
+      const res = await fetch("/api/shop-settings")
+      if (res.ok) {
+        const data = await res.json()
+        if (data.preOrder) setPreOrder(data.preOrder)
+      }
+    } catch {
+      console.error("Failed to fetch shop settings")
+    }
+  }
+
+  const handleSavePreOrder = async () => {
+    setIsSavingPreOrder(true)
+    setError("")
+    try {
+      const res = await fetch("/api/shop-settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ preOrder }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setPreOrder(data.preOrder)
+        setSuccess("Pre-order settings saved!")
+        setTimeout(() => setSuccess(""), 3000)
+      } else {
+        setError("Failed to save pre-order settings")
+      }
+    } catch {
+      setError("Failed to save pre-order settings")
+    } finally {
+      setIsSavingPreOrder(false)
+    }
+  }
+
+  const handleToggleSoldOut = async (mascot: MascotProduct) => {
+    setTogglingSoldOutId(mascot.id)
+    setError("")
+    try {
+      const res = await fetch("/api/mascots", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...mascot, soldOut: !mascot.soldOut }),
+      })
+      if (res.ok) {
+        await fetchMascots()
+        setSuccess(mascot.soldOut ? "Marked as available" : "Marked as sold out")
+        setTimeout(() => setSuccess(""), 2500)
+      } else {
+        setError("Failed to update sold out status")
+      }
+    } catch {
+      setError("Failed to update sold out status")
+    } finally {
+      setTogglingSoldOutId(null)
+    }
+  }
+
   const emptyMascot = (): MascotProduct => ({
     id: "",
     name: "",
@@ -204,6 +269,7 @@ export default function ManagerPage() {
     category: "mascot",
     featured: false,
     active: true,
+    soldOut: false,
     sortOrder: mascots.length + 1,
   })
 
@@ -270,7 +336,11 @@ export default function ManagerPage() {
     })
   }
 
-  const updateAccessory = (accId: string, field: "name" | "price", value: string) => {
+  const updateAccessory = (
+    accId: string,
+    field: "name" | "price" | "soldOut",
+    value: string | boolean,
+  ) => {
     if (!editingMascot) return
     setEditingMascot({
       ...editingMascot,
@@ -308,8 +378,22 @@ export default function ManagerPage() {
         await fetchInvoices()
         await fetchTerms()
         await fetchMascots()
+        await fetchShopSettings()
       } else {
-        setError("Invalid username or password")
+        const data = await res.json().catch(() => ({}))
+        if (res.status === 429) {
+          setError(
+            typeof data.error === "string"
+              ? data.error
+              : "Too many login attempts. Wait 10 minutes, then try again.",
+          )
+        } else {
+          setError(
+            typeof data.error === "string"
+              ? data.error
+              : "Invalid username or password",
+          )
+        }
       }
     } catch {
       setError("Login failed. Please try again.")
@@ -839,6 +923,88 @@ export default function ManagerPage() {
           <div className="space-y-6">
             {!showMascotForm ? (
               <>
+                <div className="bg-card rounded-2xl p-6 border border-border space-y-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <h2 className="font-semibold">Pre-order mode</h2>
+                      <p className="text-sm text-muted-foreground">
+                        Customers pay advance now and reserve stock before it arrives.
+                      </p>
+                    </div>
+                    <label className="flex items-center gap-2 cursor-pointer shrink-0">
+                      <input
+                        type="checkbox"
+                        checked={preOrder.enabled}
+                        onChange={(e) =>
+                          setPreOrder({ ...preOrder, enabled: e.target.checked })
+                        }
+                        className="w-4 h-4 accent-primary"
+                      />
+                      <span className="text-sm font-medium">Enabled</span>
+                    </label>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Advance (PKR)</label>
+                      <Input
+                        type="number"
+                        value={preOrder.advanceAmount}
+                        onChange={(e) =>
+                          setPreOrder({
+                            ...preOrder,
+                            advanceAmount: Number(e.target.value) || 0,
+                          })
+                        }
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Stock ETA (days)</label>
+                      <Input
+                        type="number"
+                        value={preOrder.etaDays}
+                        onChange={(e) =>
+                          setPreOrder({
+                            ...preOrder,
+                            etaDays: Number(e.target.value) || 0,
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="block text-sm font-medium mb-2">Banner headline</label>
+                      <Input
+                        value={preOrder.headline}
+                        onChange={(e) =>
+                          setPreOrder({ ...preOrder, headline: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="block text-sm font-medium mb-2">Banner details</label>
+                      <textarea
+                        value={preOrder.details}
+                        onChange={(e) =>
+                          setPreOrder({ ...preOrder, details: e.target.value })
+                        }
+                        className="w-full min-h-[80px] p-3 bg-input border border-border rounded-lg text-sm resize-y"
+                      />
+                    </div>
+                  </div>
+                  <Button onClick={handleSavePreOrder} disabled={isSavingPreOrder}>
+                    {isSavingPreOrder ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4 mr-2" />
+                        Save Pre-order Settings
+                      </>
+                    )}
+                  </Button>
+                </div>
+
                 <Button
                   onClick={() => {
                     setEditingMascot(emptyMascot())
@@ -889,7 +1055,24 @@ export default function ManagerPage() {
                               </span>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2 flex-shrink-0">
+                          <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
+                            <Button
+                              size="sm"
+                              variant={mascot.soldOut ? "default" : "outline"}
+                              disabled={togglingSoldOutId === mascot.id}
+                              onClick={() => handleToggleSoldOut(mascot)}
+                              className={
+                                mascot.soldOut
+                                  ? "bg-foreground text-background hover:bg-foreground/90"
+                                  : ""
+                              }
+                            >
+                              {togglingSoldOutId === mascot.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                mascot.soldOut ? "Sold Out" : "Mark Sold Out"
+                              )}
+                            </Button>
                             <span
                               className={`text-xs px-2 py-1 rounded-full ${
                                 mascot.active
@@ -899,6 +1082,11 @@ export default function ManagerPage() {
                             >
                               {mascot.active ? "Active" : "Hidden"}
                             </span>
+                            {mascot.soldOut && (
+                              <span className="text-xs px-2 py-1 rounded-full bg-gray-800 text-white">
+                                Sold Out
+                              </span>
+                            )}
                             {mascot.featured && (
                               <span className="text-xs px-2 py-1 rounded-full bg-amber-100 text-amber-700">
                                 Featured
@@ -982,6 +1170,16 @@ export default function ManagerPage() {
                       />
                     </div>
                     <div>
+                      <label className="block text-sm font-medium mb-2">
+                        Original price (PKR, optional)
+                      </label>
+                      <Input
+                        value={editingMascot.originalPrice ?? ""}
+                        onChange={(e) => updateMascotField("originalPrice", e.target.value)}
+                        placeholder="Show crossed out during pre-order"
+                      />
+                    </div>
+                    <div>
                       <label className="block text-sm font-medium mb-2">Category</label>
                       <select
                         value={editingMascot.category || "mascot"}
@@ -1022,6 +1220,17 @@ export default function ManagerPage() {
                       <label className="flex items-center gap-2 cursor-pointer">
                         <input
                           type="checkbox"
+                          checked={editingMascot.soldOut ?? false}
+                          onChange={(e) => updateMascotField("soldOut", e.target.checked)}
+                          className="w-4 h-4 accent-primary"
+                        />
+                        <span className="text-sm font-medium">Sold out</span>
+                      </label>
+                    </div>
+                    <div>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
                           checked={editingMascot.active}
                           onChange={(e) => updateMascotField("active", e.target.checked)}
                           className="w-4 h-4 accent-primary"
@@ -1048,12 +1257,12 @@ export default function ManagerPage() {
                     ) : (
                       <div className="space-y-3">
                         {editingMascot.accessories.map((acc) => (
-                          <div key={acc.id} className="flex gap-3 items-start">
+                          <div key={acc.id} className="flex flex-wrap gap-3 items-center">
                             <Input
                               value={acc.name}
                               onChange={(e) => updateAccessory(acc.id, "name", e.target.value)}
                               placeholder="Field name (e.g., Battery)"
-                              className="flex-1"
+                              className="flex-1 min-w-[140px]"
                             />
                             <Input
                               value={acc.price}
@@ -1061,6 +1270,17 @@ export default function ManagerPage() {
                               placeholder="Price (PKR)"
                               className="w-36"
                             />
+                            <label className="flex items-center gap-2 text-sm shrink-0">
+                              <input
+                                type="checkbox"
+                                checked={acc.soldOut ?? false}
+                                onChange={(e) =>
+                                  updateAccessory(acc.id, "soldOut", e.target.checked)
+                                }
+                                className="w-4 h-4 accent-primary"
+                              />
+                              Sold out
+                            </label>
                             <Button
                               type="button"
                               variant="ghost"

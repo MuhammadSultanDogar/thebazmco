@@ -60,7 +60,7 @@ export async function POST(request: Request) {
   try {
     const body = await request.json()
     const site = await loadSiteData()
-    const validation = validateOrderPayload(body, site.mascots)
+    const validation = validateOrderPayload(body, site.mascots, site.preOrder)
 
     if (!validation.ok) {
       return secureJson({ error: validation.error }, { status: 400 })
@@ -82,6 +82,9 @@ export async function POST(request: Request) {
       freeShipping: data.freeShipping,
       paymentImage: data.paymentImage,
       status: "pending_review",
+      orderType: data.orderType,
+      amountDueNow: data.amountDueNow,
+      balanceDue: data.balanceDue,
     }
 
     const nextConfig = {

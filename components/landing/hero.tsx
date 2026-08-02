@@ -2,7 +2,7 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { MessageCircle, Instagram, Sparkles, Play, Mail, ShoppingBag } from "lucide-react"
+import { MessageCircle, Instagram, ShoppingBag, Play, Mail } from "lucide-react"
 import { INSTAGRAM_REELS } from "@/lib/constants/instagram"
 import {
   CONTACT_EMAIL,
@@ -28,30 +28,30 @@ export function Hero() {
 
         <div className="relative z-10 flex flex-col px-4 sm:px-6 pb-5 pt-1 bg-white">
           <p className="inline-flex items-center gap-1.5 self-start text-primary text-[10px] font-semibold tracking-[0.18em] uppercase mb-3 px-3 py-1.5 rounded-full bg-white/90 border border-primary/15 shadow-sm backdrop-blur-sm">
-            <Sparkles className="w-3 h-3" />
-            Live Event Energy
+            <ShoppingBag className="w-3 h-3" />
+            Mascot Shop Pakistan
           </p>
 
           <h1 className="headline-display text-[1.9rem] leading-[1.06] sm:text-[2.1rem] mb-3">
             <span className="block text-primary">Inflatable Mascots</span>
             <span className="block text-muted-foreground text-xl font-semibold mt-0.5">
-              & Gorilla Shows
+              Delivered Nationwide
             </span>
           </h1>
 
           <HeroMobileTicker />
 
           <p className="text-sm text-muted-foreground leading-relaxed mb-4">
-            Book live performances and shop premium inflatables, delivered across all cities in Pakistan.
+            Shop premium gorilla, panda, and teddy inflatables plus batteries and accessories. Order online, pay by bank transfer, delivered across Pakistan.
           </p>
 
           <div className="flex flex-col gap-2 mb-3">
             <a
-              href="#performance"
+              href="#mascots"
               className="inline-flex items-center justify-center gap-2 px-5 py-3.5 bg-primary text-primary-foreground text-sm font-bold rounded-full shadow-lg shadow-primary/25"
             >
-              <Sparkles className="w-4 h-4" />
-              Book a Performance
+              <ShoppingBag className="w-4 h-4" />
+              Shop Mascots
             </a>
             <Link
               href={HOOK_REEL.url}
@@ -60,7 +60,7 @@ export function Hero() {
               className="inline-flex items-center justify-center gap-2 px-5 py-3.5 bg-white/90 text-primary text-sm font-bold rounded-full border-2 border-primary/20 backdrop-blur-sm"
             >
               <Play className="w-4 h-4 fill-primary" />
-              Watch Our Reels
+              See Them in Action
             </Link>
           </div>
 
@@ -105,21 +105,21 @@ export function Hero() {
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div className="text-left">
               <p className="inline-flex items-center gap-1.5 text-primary text-xs font-semibold tracking-wide uppercase mb-3 px-3 py-1.5 rounded-full bg-white border border-primary/15 shadow-sm">
-                <Sparkles className="w-3 h-3" />
-                Shop · Perform
+                <ShoppingBag className="w-3 h-3" />
+                Pakistan&apos;s Mascot Shop
               </p>
 
               <h1 className="headline-display text-[4rem] mb-5">
                 <span className="text-primary mr-2">Inflatable</span>
                 <span className="text-foreground">Mascots</span>
                 <span className="block text-muted-foreground text-[2.75rem] mt-1 font-semibold">
-                  & Gorilla Shows
+                  Delivered Nationwide
                 </span>
               </h1>
 
               <p className="text-lg text-muted-foreground max-w-lg mb-8 leading-relaxed">
-                Buy premium inflatable mascots or book live gorilla performances —
-                delivered across all cities in Pakistan.
+                Buy premium inflatable gorillas, pandas, teddies, and accessories.
+                100% advance payment, verified dispatch, delivery across all cities in Pakistan.
               </p>
 
               <div className="flex flex-row gap-3 justify-start mb-8">
@@ -128,14 +128,16 @@ export function Hero() {
                   className="inline-flex items-center justify-center gap-2 px-7 py-3 bg-primary text-primary-foreground text-sm font-bold rounded-full shadow-md shadow-primary/20 hover:brightness-105 transition-all"
                 >
                   <ShoppingBag className="w-4 h-4" />
-                  Shop
+                  Shop Now
                 </a>
                 <a
-                  href="#performance"
+                  href="https://wa.me/923255105062"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="inline-flex items-center justify-center gap-2 px-7 py-3 bg-white text-primary text-sm font-bold rounded-full border-2 border-primary/25 hover:bg-secondary transition-all"
                 >
-                  <Sparkles className="w-4 h-4" />
-                  Book
+                  <MessageCircle className="w-4 h-4" />
+                  WhatsApp Order
                 </a>
               </div>
 

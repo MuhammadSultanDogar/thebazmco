@@ -1,6 +1,6 @@
 "use client"
 
-import { Instagram, MessageCircle, MapPin, ShoppingBag, Sparkles, Mail } from "lucide-react"
+import { Instagram, MessageCircle, MapPin, ShoppingBag, HelpCircle, Mail } from "lucide-react"
 import Image from "next/image"
 import { CONTACT_EMAIL, WHATSAPP_NUMBER, INSTAGRAM_HANDLE, INSTAGRAM_URL } from "@/lib/constants/contact"
 
@@ -22,8 +22,8 @@ export function Footer() {
             <a href="#mascots" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary font-medium transition-colors">
               <ShoppingBag className="w-3.5 h-3.5" /> Shop
             </a>
-            <a href="#performance" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary font-medium transition-colors">
-              <Sparkles className="w-3.5 h-3.5" /> Performances
+            <a href="#faq" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary font-medium transition-colors">
+              <HelpCircle className="w-3.5 h-3.5" /> FAQ
             </a>
             <a href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary font-medium transition-colors">
               <Instagram className="w-3.5 h-3.5" /> @{INSTAGRAM_HANDLE}

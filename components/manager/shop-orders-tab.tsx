@@ -154,9 +154,21 @@ export function ShopOrdersTab() {
               <span>{viewing.freeShipping ? "FREE" : `PKR ${formatPrice(viewing.shipping)}`}</span>
             </div>
             <div className="flex justify-between font-bold text-base">
-              <span>Total</span>
+              <span>Order total</span>
               <span className="text-primary">PKR {formatPrice(viewing.total)}</span>
             </div>
+            {viewing.orderType === "pre_order" && (
+              <>
+                <div className="flex justify-between text-primary font-semibold">
+                  <span>Advance paid</span>
+                  <span>PKR {formatPrice(viewing.amountDueNow ?? 0)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Balance due</span>
+                  <span>PKR {formatPrice(viewing.balanceDue ?? 0)}</span>
+                </div>
+              </>
+            )}
           </div>
 
           <div>
@@ -261,6 +273,7 @@ export function ShopOrdersTab() {
                   <p className="text-sm text-muted-foreground">{order.customerPhone}</p>
                   <p className="text-xs text-muted-foreground">
                     {new Date(order.createdAt).toLocaleString()} · PKR {formatPrice(order.total)} · {order.items.length} item(s)
+                    {order.orderType === "pre_order" && " · Pre-order"}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">

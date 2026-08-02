@@ -7,44 +7,81 @@ type RateLimitOptions = {
 
 const devCounters = new Map<string, { count: number; resetAt: number }>()
 
-export async function checkRateLimit(
+export async function isRateLimited(
   key: string,
-  { limit, windowSeconds }: RateLimitOptions,
-): Promise<{ allowed: boolean; remaining: number }> {
+  { limit }: RateLimitOptions,
+): Promise<boolean> {
   if (isRedisConfigured()) {
     const redis = getRedis()
-    if (!redis) return { allowed: true, remaining: limit }
+    if (!redis) return false
+
+    const count = (await redis.get<number>(`ratelimit:${key}`)) ?? 0
+    return count >= limit
+  }
+
+  const entry = devCounters.get(key)
+  if (!entry || Date.now() > entry.resetAt) return false
+  return entry.count >= limit
+}
+
+export async function recordRateLimitFailure(
+  key: string,
+  { windowSeconds }: Pick<RateLimitOptions, "windowSeconds">,
+) {
+  if (isRedisConfigured()) {
+    const redis = getRedis()
+    if (!redis) return
 
     const redisKey = `ratelimit:${key}`
     const count = await redis.incr(redisKey)
     if (count === 1) {
       await redis.expire(redisKey, windowSeconds)
     }
-
-    return {
-      allowed: count <= limit,
-      remaining: Math.max(0, limit - count),
-    }
+    return
   }
 
   const now = Date.now()
   const entry = devCounters.get(key)
   if (!entry || now > entry.resetAt) {
     devCounters.set(key, { count: 1, resetAt: now + windowSeconds * 1000 })
-    return { allowed: true, remaining: limit - 1 }
+    return
   }
-
   entry.count += 1
-  return {
-    allowed: entry.count <= limit,
-    remaining: Math.max(0, limit - entry.count),
+}
+
+export async function clearRateLimit(key: string) {
+  if (isRedisConfigured()) {
+    const redis = getRedis()
+    if (!redis) return
+    await redis.del(`ratelimit:${key}`)
+    return
   }
+  devCounters.delete(key)
 }
 
 export async function enforceRateLimit(
   key: string,
-  options: RateLimitOptions,
+  { limit, windowSeconds }: RateLimitOptions,
 ): Promise<boolean> {
-  const result = await checkRateLimit(key, options)
-  return result.allowed
+  if (isRedisConfigured()) {
+    const redis = getRedis()
+    if (!redis) return true
+
+    const redisKey = `ratelimit:${key}`
+    const count = await redis.incr(redisKey)
+    if (count === 1) {
+      await redis.expire(redisKey, windowSeconds)
+    }
+    return count <= limit
+  }
+
+  const now = Date.now()
+  const entry = devCounters.get(key)
+  if (!entry || now > entry.resetAt) {
+    devCounters.set(key, { count: 1, resetAt: now + windowSeconds * 1000 })
+    return true
+  }
+
+  entry.count += 1
+  return entry.count <= limit
 }

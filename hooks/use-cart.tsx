@@ -12,6 +12,9 @@ import {
 import type { CartItem } from "@/lib/types/order"
 import type { MascotProduct } from "@/lib/types/mascot"
 import { calculateOrderTotals } from "@/lib/constants/payment"
+import { isProductSoldOut } from "@/lib/utils/product-availability"
+import { DEFAULT_PRE_ORDER } from "@/lib/types/pre-order"
+import type { PreOrderSettings } from "@/lib/types/pre-order"
 
 type CartContextValue = {
   items: CartItem[]
@@ -21,6 +24,11 @@ type CartContextValue = {
   total: number
   freeShipping: boolean
   amountToFreeShipping: number
+  preOrder: PreOrderSettings
+  amountDueNow: number
+  balanceDue: number
+  isPreOrder: boolean
+  setPreOrderSettings: (settings: PreOrderSettings) => void
   addItem: (product: MascotProduct) => void
   removeItem: (productId: string) => void
   updateQuantity: (productId: string, quantity: number) => void
@@ -42,6 +50,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false)
   const [checkoutOpen, setCheckoutOpen] = useState(false)
   const [hydrated, setHydrated] = useState(false)
+  const [preOrder, setPreOrderSettings] = useState<PreOrderSettings>(DEFAULT_PRE_ORDER)
 
   useEffect(() => {
     try {
@@ -54,11 +63,23 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [])
 
   useEffect(() => {
+    fetch("/api/shop-settings")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.preOrder) setPreOrderSettings(data.preOrder)
+      })
+      .catch(() => {
+        /* ignore */
+      })
+  }, [])
+
+  useEffect(() => {
     if (!hydrated) return
     localStorage.setItem(STORAGE_KEY, JSON.stringify(items))
   }, [items, hydrated])
 
   const addItem = useCallback((product: MascotProduct) => {
+    if (isProductSoldOut(product)) return
     setItems((prev) => {
       const existing = prev.find((i) => i.product.id === product.id)
       if (existing) {
@@ -90,6 +111,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const totals = useMemo(() => calculateOrderTotals(items), [items])
   const itemCount = useMemo(() => items.reduce((s, i) => s + i.quantity, 0), [items])
   const amountToFreeShipping = Math.max(0, 10000 - totals.subtotal)
+  const isPreOrder = preOrder.enabled && items.length > 0
+  const amountDueNow = isPreOrder ? preOrder.advanceAmount : totals.total
+  const balanceDue = isPreOrder ? Math.max(0, totals.total - amountDueNow) : 0
 
   const value: CartContextValue = {
     items,
@@ -99,6 +123,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
     total: totals.total,
     freeShipping: totals.freeShipping,
     amountToFreeShipping,
+    preOrder,
+    amountDueNow,
+    balanceDue,
+    isPreOrder,
+    setPreOrderSettings,
     addItem,
     removeItem,
     updateQuantity,

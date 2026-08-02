@@ -1,4 +1,5 @@
 import type { MascotProduct } from "@/lib/types/mascot"
+import type { PreOrderSettings } from "@/lib/types/pre-order"
 import type { ShopOrder } from "@/lib/types/order"
 import type { Invoice } from "@/lib/types/invoice"
 
@@ -12,6 +13,7 @@ export type SiteData = {
   mascots: MascotProduct[]
   rates: PerformanceRates
   terms: string
+  preOrder: PreOrderSettings
   orders: ShopOrder[]
   invoices: Invoice[]
   orderCounter: number

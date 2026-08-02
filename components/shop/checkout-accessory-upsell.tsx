@@ -1,11 +1,12 @@
 "use client"
 
-import Image from "next/image"
 import useSWR from "swr"
 import { Plus, Sparkles, Zap } from "lucide-react"
 import type { MascotProduct } from "@/lib/types/mascot"
 import { DEFAULT_PRODUCTS } from "@/lib/constants/products"
 import { getProductPrimaryImage } from "@/lib/utils/product-images"
+import { isProductSoldOut } from "@/lib/utils/product-availability"
+import { SmartProductImage } from "@/components/shop/smart-product-image"
 import { useCart } from "@/hooks/use-cart"
 import { Button } from "@/components/ui/button"
 
@@ -25,6 +26,7 @@ export function CheckoutAccessoryUpsell() {
   const suggestions = list.filter(
     (p) =>
       p.active &&
+      !isProductSoldOut(p) &&
       p.category === "accessory" &&
       !cartIds.has(p.id),
   )
@@ -55,13 +57,11 @@ export function CheckoutAccessoryUpsell() {
             >
               <div className="relative aspect-square bg-secondary">
                 {image ? (
-                  <Image
+                  <SmartProductImage
                     src={image}
                     alt={product.name}
-                    fill
-                    unoptimized={image.startsWith("data:image/")}
-                    className="object-cover"
                     sizes="140px"
+                    containerAspect={1}
                   />
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center text-2xl">

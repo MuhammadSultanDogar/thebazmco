@@ -18,6 +18,11 @@ export function normalizeMascotProduct(product: MascotProduct): MascotProduct {
     ...product,
     images,
     image: images[0] ?? "",
+    soldOut: product.soldOut === true,
+    accessories: (product.accessories ?? []).map((acc) => ({
+      ...acc,
+      soldOut: acc.soldOut === true,
+    })),
   }
 }
 

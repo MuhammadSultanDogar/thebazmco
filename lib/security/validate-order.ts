@@ -1,12 +1,16 @@
 import type { MascotProduct } from "@/lib/types/mascot"
 import type { OrderLineItem } from "@/lib/types/order"
+import type { PreOrderSettings } from "@/lib/types/pre-order"
 import { FREE_SHIPPING_THRESHOLD, parsePrice } from "@/lib/constants/payment"
+import { isProductSoldOut } from "@/lib/utils/product-availability"
 import { isDataUrl } from "@/lib/utils/compress-image"
 
 type OrderPayload = {
   customerPhone?: string
   customerAddress?: string
   paymentImage?: string
+  orderType?: "standard" | "pre_order"
+  amountDueNow?: number
   items?: {
     productId?: string
     name?: string
@@ -28,6 +32,9 @@ export type ValidatedOrderInput = {
   shipping: number
   total: number
   freeShipping: boolean
+  orderType: "standard" | "pre_order"
+  amountDueNow: number
+  balanceDue: number
 }
 
 const MAX_PHONE_LEN = 20
@@ -58,6 +65,7 @@ function calculateTotals(
 export function validateOrderPayload(
   body: OrderPayload,
   mascots: MascotProduct[],
+  preOrder: PreOrderSettings,
 ): { ok: true; data: ValidatedOrderInput } | { ok: false; error: string } {
   const phone = body.customerPhone?.trim()
   const address = body.customerAddress?.trim()
@@ -108,6 +116,10 @@ export function validateOrderPayload(
       return { ok: false, error: "Product unavailable" }
     }
 
+    if (isProductSoldOut(product)) {
+      return { ok: false, error: `${product.name} is sold out` }
+    }
+
     if (item.price && item.price !== product.price) {
       return { ok: false, error: "Price mismatch — refresh and try again" }
     }
@@ -116,6 +128,21 @@ export function validateOrderPayload(
   }
 
   const totals = calculateTotals(resolvedItems)
+  const isPreOrder = preOrder.enabled
+  const amountDueNow = isPreOrder ? preOrder.advanceAmount : totals.total
+  const balanceDue = isPreOrder ? Math.max(0, totals.total - amountDueNow) : 0
+
+  if (body.subtotal !== undefined && body.subtotal !== totals.subtotal) {
+    return { ok: false, error: "Subtotal mismatch — refresh and try again" }
+  }
+
+  if (body.total !== undefined && body.total !== totals.total) {
+    return { ok: false, error: "Total mismatch — refresh and try again" }
+  }
+
+  if (body.amountDueNow !== undefined && body.amountDueNow !== amountDueNow) {
+    return { ok: false, error: "Payment amount mismatch — refresh and try again" }
+  }
 
   const lineItems: OrderLineItem[] = resolvedItems.map(({ product, quantity }) => ({
     productId: product.id,
@@ -132,6 +159,9 @@ export function validateOrderPayload(
       paymentImage,
       items: lineItems,
       ...totals,
+      orderType: isPreOrder ? "pre_order" : "standard",
+      amountDueNow,
+      balanceDue,
     },
   }
 }

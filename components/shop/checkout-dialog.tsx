@@ -31,6 +31,9 @@ export function CheckoutDialog() {
     checkoutOpen,
     closeCheckout,
     clearCart,
+    isPreOrder,
+    amountDueNow,
+    balanceDue,
   } = useCart()
 
   const [phone, setPhone] = useState("")
@@ -76,6 +79,8 @@ export function CheckoutDialog() {
         customerPhone: phone.trim(),
         customerAddress: address.trim(),
         paymentImage,
+        orderType: isPreOrder ? "pre_order" : "standard",
+        amountDueNow,
         items: items.map(({ product, quantity }) => ({
           productId: product.id,
           name: product.name,
@@ -120,7 +125,9 @@ export function CheckoutDialog() {
     <Dialog open={checkoutOpen} onOpenChange={(open) => !open && closeCheckout()}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="font-display text-xl">Checkout — 100% Advance</DialogTitle>
+          <DialogTitle className="font-display text-xl">
+            {isPreOrder ? "Pre-order — Reserve with Advance" : "Checkout — 100% Advance"}
+          </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-5">
@@ -141,13 +148,23 @@ export function CheckoutDialog() {
               </p>
             </div>
             <p className="text-xs text-muted-foreground pt-1 border-t border-primary/10">
-              Transfer the full amount (PKR {formatPrice(total)}) then upload screenshot below.
+              {isPreOrder
+                ? `Transfer PKR ${formatPrice(amountDueNow)} advance now, then upload screenshot below. Balance PKR ${formatPrice(balanceDue)} due before dispatch.`
+                : `Transfer the full amount (PKR ${formatPrice(total)}) then upload screenshot below.`}
             </p>
           </div>
 
-          <div className="p-3 rounded-xl bg-primary text-primary-foreground text-sm font-medium text-center">
-            Total due now: PKR {formatPrice(total)}
-            {freeShipping && " · Free Shipping ✓"}
+          <div className="p-3 rounded-xl bg-primary text-primary-foreground text-sm font-medium text-center space-y-1">
+            <p>Pay now: PKR {formatPrice(amountDueNow)}</p>
+            {isPreOrder && balanceDue > 0 && (
+              <p className="text-xs opacity-90">
+                Pre-order total PKR {formatPrice(total)} · Balance PKR {formatPrice(balanceDue)} later
+              </p>
+            )}
+            {freeShipping && !isPreOrder && " · Free Shipping ✓"}
+            {freeShipping && isPreOrder && (
+              <p className="text-xs opacity-90">Free shipping applied on order total</p>
+            )}
           </div>
 
           <div>
@@ -221,13 +238,15 @@ export function CheckoutDialog() {
             ) : (
               <>
                 <MessageCircle className="w-4 h-4" />
-                Submit & Open WhatsApp
+                {isPreOrder ? "Submit Pre-order & WhatsApp" : "Submit & Open WhatsApp"}
               </>
             )}
           </Button>
 
           <p className="text-xs text-center text-muted-foreground">
-            Our team will review your payment in the manager portal before dispatching your order.
+            {isPreOrder
+              ? "We'll confirm your reservation after reviewing your advance payment."
+              : "Our team will review your payment in the manager portal before dispatching your order."}
           </p>
         </form>
       </DialogContent>

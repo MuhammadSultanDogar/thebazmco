@@ -45,9 +45,16 @@ export function buildWhatsAppOrderMessage(order: {
   shipping: number
   total: number
   freeShipping: boolean
+  orderType?: "standard" | "pre_order"
+  amountDueNow?: number
+  balanceDue?: number
 }) {
+  const isPreOrder = order.orderType === "pre_order"
+  const paidNow = order.amountDueNow ?? order.total
+  const balance = order.balanceDue ?? 0
+
   const lines = [
-    `Hi TheBazm! I just placed order ${order.orderNumber}.`,
+    `Hi TheBazm! I just placed ${isPreOrder ? "a pre-order" : "order"} ${order.orderNumber}.`,
     "",
     "*Items:*",
     ...order.items.map((i) => `• ${i.name} x${i.quantity} — PKR ${i.price}`),
@@ -56,12 +63,21 @@ export function buildWhatsAppOrderMessage(order: {
     order.freeShipping
       ? "Shipping: FREE (order above PKR 10,000)"
       : `Shipping: PKR ${formatPrice(order.shipping)}`,
-    `*Total Paid (Advance): PKR ${formatPrice(order.total)}*`,
+    `Order total: PKR ${formatPrice(order.total)}`,
+    "",
+    isPreOrder
+      ? `*Advance paid now: PKR ${formatPrice(paidNow)}*`
+      : `*Total Paid (Advance): PKR ${formatPrice(paidNow)}*`,
+    ...(isPreOrder && balance > 0
+      ? [`Balance before dispatch: PKR ${formatPrice(balance)}`]
+      : []),
     "",
     `Phone: ${order.customerPhone}`,
     `Address: ${order.customerAddress}`,
     "",
-    "Payment screenshot submitted on website. Please confirm and dispatch.",
+    isPreOrder
+      ? "Pre-order advance screenshot submitted on website. Please confirm my reservation."
+      : "Payment screenshot submitted on website. Please confirm and dispatch.",
   ]
   return lines.join("\n")
 }
