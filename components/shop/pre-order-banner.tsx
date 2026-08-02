@@ -6,9 +6,9 @@ import { useShopSettings } from "@/hooks/use-shop-settings"
 import { formatPreOrderAdvanceLabel } from "@/lib/utils/pre-order-payment"
 
 export function PreOrderBanner() {
-  const { preOrder } = useShopSettings()
+  const { preOrder, isReady } = useShopSettings()
 
-  if (!preOrder.enabled) return null
+  if (!isReady || !preOrder.enabled) return null
 
   return (
     <div className="mb-6 lg:mb-8 rounded-2xl border-2 border-primary/25 bg-gradient-to-r from-primary/10 via-white to-primary/5 p-4 sm:p-5 shadow-sm">

@@ -14,7 +14,7 @@ import type { MascotProduct } from "@/lib/types/mascot"
 import { calculateOrderTotals } from "@/lib/constants/payment"
 import { isProductSoldOut } from "@/lib/utils/product-availability"
 import { calculatePreOrderPayment } from "@/lib/utils/pre-order-payment"
-import { DEFAULT_PRE_ORDER } from "@/lib/types/pre-order"
+import { useShopSettings } from "@/components/providers/shop-settings-provider"
 import type { PreOrderSettings } from "@/lib/types/pre-order"
 
 type CartContextValue = {
@@ -30,7 +30,6 @@ type CartContextValue = {
   amountDueNow: number
   balanceDue: number
   isPreOrder: boolean
-  setPreOrderSettings: (settings: PreOrderSettings) => void
   addItem: (product: MascotProduct) => void
   removeItem: (productId: string) => void
   updateQuantity: (productId: string, quantity: number) => void
@@ -48,11 +47,11 @@ const CartContext = createContext<CartContextValue | null>(null)
 const STORAGE_KEY = "thebazm-cart"
 
 export function CartProvider({ children }: { children: ReactNode }) {
+  const { preOrder } = useShopSettings()
   const [items, setItems] = useState<CartItem[]>([])
   const [isOpen, setIsOpen] = useState(false)
   const [checkoutOpen, setCheckoutOpen] = useState(false)
   const [hydrated, setHydrated] = useState(false)
-  const [preOrder, setPreOrderSettings] = useState<PreOrderSettings>(DEFAULT_PRE_ORDER)
 
   useEffect(() => {
     try {
@@ -62,17 +61,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
       /* ignore */
     }
     setHydrated(true)
-  }, [])
-
-  useEffect(() => {
-    fetch("/api/shop-settings")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data?.preOrder) setPreOrderSettings(data.preOrder)
-      })
-      .catch(() => {
-        /* ignore */
-      })
   }, [])
 
   useEffect(() => {
@@ -131,7 +119,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
     amountDueNow: preOrderPayment.amountDueNow,
     balanceDue: preOrderPayment.balanceDue,
     isPreOrder: preOrderPayment.isPreOrder,
-    setPreOrderSettings,
     addItem,
     removeItem,
     updateQuantity,

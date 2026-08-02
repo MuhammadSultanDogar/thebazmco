@@ -37,7 +37,7 @@ export const FAQ_ITEMS = [
   {
     question: "Can I book a live gorilla performance?",
     answer:
-      "No — TheBazm is focused on selling inflatable mascot costumes. We do not actively book live performers. Buy a gorilla, panda, or teddy mascot from our shop for your own events.",
+      "Yes — live gorilla shows are still available for weddings, birthdays, and corporate events. Our main focus is selling inflatable mascots at thebazm.co. Contact us on WhatsApp to check performance availability in your city.",
   },
   {
     question: "How far in advance should I order a mascot?",

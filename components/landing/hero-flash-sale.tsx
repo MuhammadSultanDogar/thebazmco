@@ -6,9 +6,9 @@ import { formatPrice } from "@/lib/constants/payment"
 import { useShopSettings } from "@/hooks/use-shop-settings"
 
 export function HeroFlashSale() {
-  const { preOrder } = useShopSettings()
+  const { preOrder, isReady } = useShopSettings()
 
-  if (!preOrder.enabled) return null
+  if (!isReady || !preOrder.enabled) return null
 
   return (
     <Link

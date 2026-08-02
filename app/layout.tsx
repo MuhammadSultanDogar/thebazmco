@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from 'next'
 import { Plus_Jakarta_Sans, Inter } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { AppProviders } from '@/components/providers/app-providers'
+import { loadSiteConfig } from '@/lib/store'
+import { DEFAULT_PRE_ORDER } from '@/lib/types/pre-order'
 import { SEO_KEYWORDS, SITE_DESCRIPTION, SITE_NAME, SITE_URL } from '@/lib/seo/site'
 import './globals.css'
 
@@ -66,15 +68,23 @@ export const viewport: Viewport = {
   initialScale: 1,
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  let initialPreOrder = DEFAULT_PRE_ORDER
+  try {
+    const config = await loadSiteConfig()
+    initialPreOrder = config.preOrder ?? DEFAULT_PRE_ORDER
+  } catch {
+    /* use defaults */
+  }
+
   return (
     <html lang="en" className={`${jakarta.variable} ${inter.variable}`}>
       <body className="font-sans antialiased">
-        <AppProviders>
+        <AppProviders initialPreOrder={initialPreOrder}>
           {children}
         </AppProviders>
         {process.env.NODE_ENV === 'production' && <Analytics />}

@@ -7,7 +7,7 @@ export type PreOrderSettings = {
 }
 
 export const DEFAULT_PRE_ORDER: PreOrderSettings = {
-  enabled: true,
+  enabled: false,
   etaDays: 10,
   advanceAmount: 10000,
   headline: "Pre-order now — stock arriving in ~10 days",

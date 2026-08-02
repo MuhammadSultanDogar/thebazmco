@@ -1,13 +1,22 @@
 "use client"
 
-const stats = [
-  { value: "Nationwide", label: "Delivery Across Pakistan" },
-  { value: "Shop", label: "Inflatable Mascots & Accessories" },
-  { value: "PKR 10k", label: "Pre-order Advance Per Mascot" },
-  { value: "24/7", label: "WhatsApp Order Support" },
-]
+import { useShopSettings } from "@/hooks/use-shop-settings"
 
 export function StatsStrip() {
+  const { preOrder } = useShopSettings()
+
+  const stats = [
+    { value: "Nationwide", label: "Delivery Across Pakistan" },
+    { value: "Shop", label: "Inflatable Mascots & Accessories" },
+    preOrder.enabled
+      ? {
+          value: preOrder.advanceAmount >= 1000 ? `${preOrder.advanceAmount / 1000}k` : String(preOrder.advanceAmount),
+          label: "Pre-order Advance Per Mascot",
+        }
+      : { value: "100%", label: "Advance Before Dispatch" },
+    { value: "24/7", label: "WhatsApp Order Support" },
+  ]
+
   return (
     <div className="hidden md:block border-y border-primary/15 bg-secondary py-6">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
