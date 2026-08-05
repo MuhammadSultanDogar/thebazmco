@@ -23,7 +23,7 @@ const DESKTOP_GORILLAS: GorillaDecor[] = [
   {
     src: "/decor/gorilla-outdoor.png",
     wrap: "absolute bottom-0 left-1/2 w-[min(32rem,55vw)] -translate-x-1/2 translate-y-[42%]",
-    img: "opacity-[0.11] mix-blend-multiply",
+    img: "opacity-[0.11] mix-blend-multiply [mask-image:radial-gradient(ellipse_at_center,black_55%,transparent_88%)]",
     anim: "mascot-bg-drift-c",
   },
 ]
