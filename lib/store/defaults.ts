@@ -1,5 +1,6 @@
 import { DEFAULT_PRODUCTS } from "@/lib/constants/products"
 import { DEFAULT_PRE_ORDER } from "@/lib/types/pre-order"
+import { DEFAULT_ORDER_NOTIFICATIONS, normalizeOrderNotifications } from "@/lib/types/order-notifications"
 import type { SiteData } from "@/lib/types/site-data"
 import type { PreOrderSettings } from "@/lib/types/pre-order"
 import { normalizeMascotList } from "@/lib/utils/product-images"
@@ -27,6 +28,7 @@ export function createDefaultSiteData(): SiteData {
     rates: { ...DEFAULT_RATES },
     terms: DEFAULT_TERMS,
     preOrder: { ...DEFAULT_PRE_ORDER },
+    orderNotifications: { ...DEFAULT_ORDER_NOTIFICATIONS },
     orders: [],
     invoices: [],
     orderCounter: 1,
@@ -59,6 +61,7 @@ export function normalizeSiteData(raw: Partial<SiteData> | null | undefined): Si
     rates: raw.rates ?? defaults.rates,
     terms: raw.terms ?? defaults.terms,
     preOrder: normalizePreOrder(raw.preOrder),
+    orderNotifications: normalizeOrderNotifications(raw.orderNotifications),
     orders: Array.isArray(raw.orders) ? raw.orders : defaults.orders,
     invoices: Array.isArray(raw.invoices) ? raw.invoices : defaults.invoices,
     orderCounter: raw.orderCounter ?? defaults.orderCounter,

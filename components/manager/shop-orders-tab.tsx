@@ -2,10 +2,14 @@
 
 import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
-import { Eye, Trash2, Truck, Check, X, Loader2, Download } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Eye, Trash2, Truck, Check, X, Loader2, Download, Mail, Save } from "lucide-react"
 import type { ShopOrder, OrderStatus } from "@/lib/types/order"
+import type { OrderNotificationSettings } from "@/lib/types/order-notifications"
+import { DEFAULT_ORDER_NOTIFICATIONS } from "@/lib/types/order-notifications"
 import { formatPrice } from "@/lib/constants/payment"
 import { countOrdersByStatus, downloadOrdersCsv } from "@/lib/utils/orders-csv"
+import { requestOrderAlertPermission } from "@/components/manager/order-alert-poller"
 
 const statusColors: Record<OrderStatus, string> = {
   pending_review: "bg-orange-100 text-orange-700",
@@ -37,6 +41,48 @@ export function ShopOrdersTab() {
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all")
   const [fetchError, setFetchError] = useState("")
+  const [notifications, setNotifications] = useState<OrderNotificationSettings>(
+    DEFAULT_ORDER_NOTIFICATIONS,
+  )
+  const [isSavingNotifications, setIsSavingNotifications] = useState(false)
+  const [notificationMessage, setNotificationMessage] = useState("")
+  const [notificationError, setNotificationError] = useState("")
+
+  const fetchNotifications = async () => {
+    try {
+      const res = await fetch("/api/notification-settings", { cache: "no-store" })
+      if (res.ok) {
+        const data = await res.json()
+        if (data.orderNotifications) setNotifications(data.orderNotifications)
+      }
+    } catch {
+      /* optional settings */
+    }
+  }
+
+  const handleSaveNotifications = async () => {
+    setIsSavingNotifications(true)
+    setNotificationMessage("")
+    setNotificationError("")
+    try {
+      const res = await fetch("/api/notification-settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderNotifications: notifications }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setNotificationError(data.error || "Failed to save email settings")
+        return
+      }
+      setNotifications(data.orderNotifications)
+      setNotificationMessage("Email notification settings saved.")
+    } catch {
+      setNotificationError("Failed to save email settings")
+    } finally {
+      setIsSavingNotifications(false)
+    }
+  }
 
   const fetchOrders = async () => {
     setLoading(true)
@@ -57,6 +103,7 @@ export function ShopOrdersTab() {
 
   useEffect(() => {
     void fetchOrders()
+    void fetchNotifications()
   }, [])
 
   const statusCounts = useMemo(() => countOrdersByStatus(orders), [orders])
@@ -204,6 +251,80 @@ export function ShopOrdersTab() {
 
   return (
     <div className="space-y-4">
+      <div className="bg-card rounded-2xl p-5 border border-border space-y-4">
+        <div className="flex items-start gap-3">
+          <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+            <Mail className="w-4 h-4 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h2 className="font-semibold">Order email alerts</h2>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Get an email when a customer places an order on the website.
+            </p>
+          </div>
+          <label className="flex items-center gap-2 cursor-pointer shrink-0 text-sm font-semibold">
+            <input
+              type="checkbox"
+              checked={notifications.enabled}
+              onChange={(e) =>
+                setNotifications({ ...notifications, enabled: e.target.checked })
+              }
+              className="w-4 h-4 accent-primary"
+            />
+            {notifications.enabled ? "On" : "Off"}
+          </label>
+        </div>
+
+        <div className="grid sm:grid-cols-[1fr_auto] gap-3 items-end">
+          <div>
+            <label className="block text-sm font-medium mb-1.5">Send alerts to</label>
+            <Input
+              type="email"
+              value={notifications.email}
+              onChange={(e) =>
+                setNotifications({ ...notifications, email: e.target.value })
+              }
+              placeholder="you@example.com"
+              disabled={!notifications.enabled}
+            />
+          </div>
+          <Button
+            onClick={() => void handleSaveNotifications()}
+            disabled={isSavingNotifications}
+            className="gap-2"
+          >
+            {isSavingNotifications ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Save className="w-4 h-4" />
+            )}
+            Save
+          </Button>
+        </div>
+
+        {notificationMessage && (
+          <p className="text-sm text-green-600">{notificationMessage}</p>
+        )}
+        {notificationError && (
+          <p className="text-sm text-red-600">{notificationError}</p>
+        )}
+        <p className="text-xs text-muted-foreground">
+          Alerts send when a customer completes checkout (from their browser — no API keys).
+          The first order triggers a confirmation link in this inbox — click it once to activate.
+          Keep the manager portal open for instant browser pop-ups too.
+        </p>
+        {typeof window !== "undefined" && "Notification" in window && Notification.permission !== "granted" && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => void requestOrderAlertPermission()}
+          >
+            Enable browser alerts
+          </Button>
+        )}
+      </div>
+
       <div className="bg-card rounded-2xl border border-border overflow-hidden">
         <div className="p-4 border-b border-border space-y-4">
           <div className="flex items-center justify-between gap-3 flex-wrap">

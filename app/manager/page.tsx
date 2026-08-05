@@ -22,6 +22,7 @@ import {
 } from "lucide-react"
 import { InvoiceTemplate } from "@/components/invoice-template"
 import { ShopOrdersTab } from "@/components/manager/shop-orders-tab"
+import { OrderAlertPoller } from "@/components/manager/order-alert-poller"
 import { ProductImagesInput } from "@/components/manager/product-images-input"
 import { normalizeMascotProduct } from "@/lib/utils/product-images"
 import { StorageTab } from "@/components/manager/storage-tab"
@@ -90,6 +91,7 @@ export default function ManagerPage() {
 
   // Tabs
   const [activeTab, setActiveTab] = useState<"rates" | "invoices" | "terms" | "mascots" | "orders" | "storage">("rates")
+  const [pendingOrderCount, setPendingOrderCount] = useState(0)
 
   // Mascots
   const [mascots, setMascots] = useState<MascotProduct[]>([])
@@ -755,6 +757,13 @@ export default function ManagerPage() {
 
   return (
     <div className="min-h-screen bg-background py-12 px-4">
+      <OrderAlertPoller
+        onPendingCount={setPendingOrderCount}
+        onNewOrder={(order) => {
+          setSuccess(`New order: ${order.orderNumber}`)
+          setTimeout(() => setSuccess(""), 8000)
+        }}
+      />
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -788,6 +797,11 @@ export default function ManagerPage() {
           >
             <Package className="w-4 h-4 mr-2" />
             Shop Orders
+            {pendingOrderCount > 0 && (
+              <span className="ml-2 text-xs font-bold bg-orange-500 text-white px-2 py-0.5 rounded-full">
+                {pendingOrderCount}
+              </span>
+            )}
           </Button>
           <Button
             variant={activeTab === "mascots" ? "default" : "outline"}

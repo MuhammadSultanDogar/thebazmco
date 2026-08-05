@@ -20,6 +20,8 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { compressImage } from "@/lib/utils/compress-image"
 import { CheckoutAccessoryUpsell } from "@/components/shop/checkout-accessory-upsell"
+import { sendOrderAlertViaFormSubmit } from "@/lib/email/order-notification"
+import type { ShopOrder } from "@/lib/types/order"
 
 export function CheckoutDialog() {
   const {
@@ -104,7 +106,24 @@ export function CheckoutDialog() {
         throw new Error(data.error || "Failed to submit order")
       }
 
-      const order = await res.json()
+      const order = (await res.json()) as ShopOrder
+
+      // FormSubmit must run in the browser (blocked from Vercel/server).
+      try {
+        const alertRes = await fetch("/api/order-alerts")
+        if (alertRes.ok) {
+          const { enabled, email } = (await alertRes.json()) as {
+            enabled: boolean
+            email: string | null
+          }
+          if (enabled && email) {
+            await sendOrderAlertViaFormSubmit(order, email)
+          }
+        }
+      } catch {
+        /* order saved — don't block WhatsApp redirect */
+      }
+
       clearCart()
       closeCheckout()
       setPhone("")
