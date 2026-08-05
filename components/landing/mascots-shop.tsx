@@ -234,9 +234,7 @@ export function MascotsShop() {
                 <div className="flex items-center gap-2 px-4 py-3 bg-primary/10 text-primary border border-primary/20 rounded-xl text-sm font-medium">
                   <CreditCard className="w-4 h-4 shrink-0" />
                   <span>
-                    {preOrder.enabled
-                      ? `Pre-order: PKR ${formatPrice(preOrder.advanceAmount)} advance per mascot`
-                      : "100% advance payment required"}
+                    {preOrder.enabled ? "Pre-order open — reserve with advance" : "100% advance payment required"}
                   </span>
                 </div>
               </div>

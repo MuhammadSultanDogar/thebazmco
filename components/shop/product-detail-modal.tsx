@@ -195,8 +195,8 @@ export function ProductDetailModal({
                 </p>
               )}
               {preOrder.enabled && !soldOut && (
-                <p className="text-xs text-primary font-medium mt-2">
-                  PKR {preOrder.advanceAmount.toLocaleString("en-PK")} advance per mascot · ~{preOrder.etaDays} days · Non-refundable
+                <p className="text-xs text-muted-foreground mt-2">
+                  ~{preOrder.etaDays} days to stock · Advance is non-refundable
                 </p>
               )}
             </div>

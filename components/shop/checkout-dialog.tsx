@@ -32,10 +32,8 @@ export function CheckoutDialog() {
     closeCheckout,
     clearCart,
     isPreOrder,
-    mascotUnits,
     amountDueNow,
     balanceDue,
-    preOrder,
   } = useCart()
 
   const [phone, setPhone] = useState("")
@@ -136,9 +134,9 @@ export function CheckoutDialog() {
           <CheckoutAccessoryUpsell />
 
           {isPreOrder && (
-            <div className="p-3 rounded-xl border border-amber-300 bg-amber-50 text-sm text-amber-950">
-              <strong>Non-refundable:</strong> Pre-order advance (PKR {formatPrice(preOrder.advanceAmount)} per mascot in cart) cannot be refunded once paid.
-            </div>
+            <p className="text-sm text-amber-950 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+              Pre-order advance is <strong>non-refundable</strong> once paid.
+            </p>
           )}
 
           <div className="p-4 rounded-xl bg-secondary border border-primary/15 space-y-2">
@@ -157,26 +155,20 @@ export function CheckoutDialog() {
             </div>
             <p className="text-xs text-muted-foreground pt-1 border-t border-primary/10">
               {isPreOrder
-                ? `Transfer PKR ${formatPrice(amountDueNow)} advance (${mascotUnits} mascot${mascotUnits !== 1 ? "s" : ""} × PKR ${formatPrice(preOrder.advanceAmount)}), then upload screenshot. Balance PKR ${formatPrice(balanceDue)} due before dispatch.`
+                ? `Transfer PKR ${formatPrice(amountDueNow)} now, then upload your screenshot below.`
                 : `Transfer the full amount (PKR ${formatPrice(total)}) then upload screenshot below.`}
             </p>
           </div>
 
           <div className="p-3 rounded-xl bg-primary text-primary-foreground text-sm font-medium text-center space-y-1">
-            <p>Pay now: PKR {formatPrice(amountDueNow)}</p>
-            {isPreOrder && mascotUnits > 0 && (
-              <p className="text-xs opacity-90">
-                {mascotUnits} mascot{mascotUnits !== 1 ? "s" : ""} × PKR {formatPrice(preOrder.advanceAmount)} advance each
-              </p>
-            )}
+            <p className="text-base font-bold">Pay now: PKR {formatPrice(amountDueNow)}</p>
             {isPreOrder && balanceDue > 0 && (
               <p className="text-xs opacity-90">
-                Pre-order total PKR {formatPrice(total)} · Balance PKR {formatPrice(balanceDue)} later
+                Balance PKR {formatPrice(balanceDue)} before dispatch · Order total PKR {formatPrice(total)}
               </p>
             )}
-            {freeShipping && !isPreOrder && " · Free Shipping ✓"}
-            {freeShipping && isPreOrder && (
-              <p className="text-xs opacity-90">Free shipping applied on order total</p>
+            {freeShipping && (
+              <p className="text-xs opacity-90">Free shipping applied</p>
             )}
           </div>
 

@@ -1,7 +1,6 @@
 "use client"
 
 import { CalendarClock, Sparkles } from "lucide-react"
-import { formatPrice } from "@/lib/constants/payment"
 import { useShopSettings } from "@/hooks/use-shop-settings"
 
 export function PreOrderBanner() {
@@ -26,9 +25,6 @@ export function PreOrderBanner() {
             </span>
           </div>
           <p className="text-sm text-muted-foreground leading-relaxed">{preOrder.details}</p>
-          <p className="mt-2 text-sm font-semibold text-primary">
-            PKR {formatPrice(preOrder.advanceAmount)} advance per mascot in cart · Stock in ~{preOrder.etaDays} days · Advance is non-refundable
-          </p>
         </div>
       </div>
     </div>
