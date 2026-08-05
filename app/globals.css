@@ -4,7 +4,7 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: #ffffff;
+  --background: #faf8ff;
   --foreground: #1a1a2e;
   --card: #ffffff;
   --card-foreground: #1a1a2e;
@@ -313,5 +313,70 @@
 @keyframes hero-ticker-scroll {
   to {
     transform: translateX(-50%);
+  }
+}
+
+@keyframes mascot-bg-drift-a {
+  0%, 100% { transform: translateY(0) rotate(var(--mascot-rotate, 0deg)); }
+  50% { transform: translateY(-12px) rotate(calc(var(--mascot-rotate, 0deg) + 2deg)); }
+}
+
+@keyframes mascot-bg-drift-b {
+  0%, 100% { transform: translateY(0) rotate(var(--mascot-rotate, 0deg)); }
+  50% { transform: translateY(-8px) rotate(calc(var(--mascot-rotate, 0deg) - 1.5deg)); }
+}
+
+@keyframes mascot-bg-drift-c {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-10px) scale(1.02); }
+}
+
+.mascot-bg-drift-a {
+  animation: mascot-bg-drift-a 14s ease-in-out infinite;
+}
+
+.mascot-bg-drift-b {
+  animation: mascot-bg-drift-b 18s ease-in-out infinite;
+}
+
+.mascot-bg-drift-c {
+  animation: mascot-bg-drift-c 16s ease-in-out infinite;
+}
+
+@keyframes mascot-orb-a {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(18px, 24px) scale(1.06); }
+}
+
+@keyframes mascot-orb-b {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-14px, -20px) scale(1.04); }
+}
+
+@keyframes mascot-orb-c {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(12px, -16px) scale(1.05); }
+}
+
+.mascot-orb-a {
+  animation: mascot-orb-a 20s ease-in-out infinite;
+}
+
+.mascot-orb-b {
+  animation: mascot-orb-b 24s ease-in-out infinite;
+}
+
+.mascot-orb-c {
+  animation: mascot-orb-c 18s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mascot-bg-drift-a,
+  .mascot-bg-drift-b,
+  .mascot-bg-drift-c,
+  .mascot-orb-a,
+  .mascot-orb-b,
+  .mascot-orb-c {
+    animation: none !important;
   }
 }

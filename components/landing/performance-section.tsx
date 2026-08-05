@@ -5,7 +5,7 @@ import { ScrollReveal } from "@/components/landing/scroll-reveal"
 
 export function PerformanceSection() {
   return (
-    <section id="performance" className="py-16 sm:py-24 bg-white scroll-mt-24">
+    <section id="performance" className="py-16 sm:py-24 bg-white/70 backdrop-blur-[1px] scroll-mt-24">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <ScrollReveal className="mb-14">
           <p className="text-primary text-xs font-bold tracking-[0.2em] uppercase mb-2">

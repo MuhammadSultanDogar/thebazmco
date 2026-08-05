@@ -44,13 +44,13 @@ export function HeroMobileScene() {
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="relative hero-mobile-logo-stage">
               <div className="absolute -inset-3 rounded-[1.5rem] bg-primary/10 blur-lg hero-mobile-pulse" />
-              <div className="relative w-28 h-28 rounded-2xl bg-white/95 backdrop-blur-md border-2 border-primary/20 shadow-xl shadow-primary/15 overflow-hidden card-3d">
+              <div className="relative w-36 h-36 sm:w-40 sm:h-40 rounded-2xl bg-white/95 backdrop-blur-md border-2 border-primary/20 shadow-xl shadow-primary/15 overflow-hidden card-3d">
                 <div className="absolute inset-0 bg-gradient-to-br from-white via-secondary/30 to-primary/5" />
                 <Image
                   src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/LOGO%20SET%20%28THEBAZM.CO%29%20%281%29-Vyn5qZbbAAo85GDoYBp77NHmq9hJWu.png"
                   alt=""
                   fill
-                  className="object-contain p-4"
+                  className="object-contain p-2.5 sm:p-3"
                   priority
                 />
               </div>

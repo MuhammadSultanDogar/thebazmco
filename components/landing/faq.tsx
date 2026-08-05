@@ -11,7 +11,7 @@ import { ScrollReveal } from "@/components/landing/scroll-reveal"
 
 export function FAQ() {
   return (
-    <section id="faq" className="py-16 sm:py-24 bg-white scroll-mt-20 sm:scroll-mt-24">
+    <section id="faq" className="py-16 sm:py-24 bg-white/65 backdrop-blur-[1px] scroll-mt-20 sm:scroll-mt-24">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-3xl">
         <ScrollReveal className="text-center mb-10">
           <p className="text-primary text-xs font-bold tracking-[0.2em] uppercase mb-2">

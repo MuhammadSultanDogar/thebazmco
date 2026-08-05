@@ -135,6 +135,12 @@ export function CheckoutDialog() {
         <form onSubmit={handleSubmit} className="space-y-5">
           <CheckoutAccessoryUpsell />
 
+          {isPreOrder && (
+            <div className="p-3 rounded-xl border border-amber-300 bg-amber-50 text-sm text-amber-950">
+              <strong>Non-refundable:</strong> Pre-order advance (PKR {formatPrice(preOrder.advanceAmount)} per mascot in cart) cannot be refunded once paid.
+            </div>
+          )}
+
           <div className="p-4 rounded-xl bg-secondary border border-primary/15 space-y-2">
             <div className="flex items-center gap-2 text-primary font-bold text-sm">
               <CreditCard className="w-4 h-4" />

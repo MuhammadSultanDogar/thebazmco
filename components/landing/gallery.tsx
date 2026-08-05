@@ -7,7 +7,7 @@ export function Gallery() {
   const reels = fetchReelPreviews()
 
   return (
-    <div id="reels" className="py-16 sm:py-20 bg-white border-t border-primary/10 scroll-mt-24">
+    <div id="reels" className="py-16 sm:py-20 bg-white/60 backdrop-blur-[1px] border-t border-primary/10 scroll-mt-24">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <ScrollReveal className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
           <div>

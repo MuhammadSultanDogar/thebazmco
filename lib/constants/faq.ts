@@ -22,12 +22,12 @@ export const FAQ_ITEMS = [
   {
     question: "What payment methods do you accept?",
     answer:
-      "We accept bank transfer (UBL). During pre-order, pay PKR 10,000 advance per mascot reserved (+ PKR 10,000 for each additional mascot). Balance is due before dispatch. When pre-order is off, 100% advance is required.",
+      "We accept bank transfer (UBL). During pre-order, pay PKR 10,000 advance per mascot in your cart. Balance is due before dispatch. Pre-order advance is non-refundable. When pre-order is off, 100% advance is required.",
   },
   {
     question: "How do pre-orders work at TheBazm?",
     answer:
-      "When stock is incoming, we open pre-orders at special prices. Pay PKR 10,000 advance per mascot online to reserve — each extra mascot adds another PKR 10,000 advance. We hold your order until stock arrives (typically within ~10 days). Balance is paid before shipping.",
+      "When stock is incoming, we open pre-orders at special prices. Add mascots to your cart — PKR 10,000 advance applies per mascot automatically. We hold your order until stock arrives (typically within ~10 days). Balance is paid before shipping. Advance is non-refundable.",
   },
   {
     question: "What accessories do you sell with mascots?",

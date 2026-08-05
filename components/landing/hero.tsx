@@ -19,15 +19,15 @@ const HOOK_REEL = INSTAGRAM_REELS[0]
 
 export function Hero() {
   return (
-    <section className="relative overflow-hidden bg-white">
-      {/* ── Mobile: artistic performance-first hero (no shop) ── */}
-      <div className="lg:hidden flex flex-col bg-white">
+    <section className="relative overflow-hidden bg-transparent">
+      {/* ── Mobile ── */}
+      <div className="lg:hidden flex flex-col bg-transparent">
         <div className="relative shrink-0 h-[36vh] min-h-[210px] max-h-[300px] w-full overflow-hidden pt-[4.5rem]">
           <HeroMobileScene />
-          <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-b from-transparent to-white pointer-events-none z-[1]" />
+          <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-b from-transparent to-[#faf8ff]/90 pointer-events-none z-[1]" />
         </div>
 
-        <div className="relative z-10 flex flex-col px-4 sm:px-6 pb-5 pt-1 bg-white">
+        <div className="relative z-10 flex flex-col px-4 sm:px-6 pb-5 pt-1">
           <HeroFlashSale />
 
           <p className="inline-flex items-center gap-1.5 self-start text-primary text-[10px] font-semibold tracking-[0.18em] uppercase mb-3 px-3 py-1.5 rounded-full bg-white/90 border border-primary/15 shadow-sm backdrop-blur-sm">
@@ -100,7 +100,7 @@ export function Hero() {
       {/* ── Desktop: unchanged ── */}
       <div className="hidden lg:block relative lg:min-h-[90vh] lg:flex lg:items-center">
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute inset-0 bg-gradient-to-b from-secondary/50 via-white to-white" />
+          <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.04] via-transparent to-transparent" />
           <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
         </div>
 

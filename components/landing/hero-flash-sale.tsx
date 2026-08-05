@@ -35,8 +35,7 @@ export function HeroFlashSale() {
               <span className="text-primary">PKR {formatPrice(preOrder.advanceAmount)} each</span>
             </p>
             <p className="text-xs sm:text-sm text-muted-foreground mt-1 leading-relaxed">
-              Special pre-order prices · Pay PKR {formatPrice(preOrder.advanceAmount)} advance per mascot ·
-              We hold your piece until stock lands
+              Special pre-order prices · PKR {formatPrice(preOrder.advanceAmount)} advance per mascot in cart
             </p>
           </div>
           <ArrowRight className="w-5 h-5 text-primary shrink-0 mt-1 group-hover:translate-x-0.5 transition-transform" />

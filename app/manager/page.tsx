@@ -966,6 +966,15 @@ export default function ManagerPage() {
                       </label>
                     </div>
                   </div>
+                  {preOrder.enabled && (
+                    <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
+                      <p className="font-semibold mb-1">Customer policy (shown on site)</p>
+                      <p>
+                        Pre-order advance of PKR {preOrder.advanceAmount.toLocaleString("en-PK")} per mascot in cart is{" "}
+                        <strong>non-refundable</strong>. Balance is due before dispatch.
+                      </p>
+                    </div>
+                  )}
                   <p className="text-xs text-muted-foreground">
                     Turn pre-order <strong>OFF</strong> when stock arrives — no code changes needed. Save below to apply on the live site.
                   </p>
