@@ -5,6 +5,10 @@ import { FREE_SHIPPING_THRESHOLD, parsePrice } from "@/lib/constants/payment"
 import { isProductSoldOut } from "@/lib/utils/product-availability"
 import { calculatePreOrderPayment } from "@/lib/utils/pre-order-payment"
 import { isDataUrl } from "@/lib/utils/compress-image"
+import {
+  validateDeliveryAddress,
+  validatePakistaniPhone,
+} from "@/lib/utils/validate-customer"
 
 type OrderPayload = {
   customerPhone?: string
@@ -38,8 +42,6 @@ export type ValidatedOrderInput = {
   balanceDue: number
 }
 
-const MAX_PHONE_LEN = 20
-const MAX_ADDRESS_LEN = 500
 const MAX_ITEMS = 20
 const MAX_ITEM_QTY = 10
 const MAX_PAYMENT_IMAGE_BYTES = 2_500_000
@@ -68,17 +70,19 @@ export function validateOrderPayload(
   mascots: MascotProduct[],
   preOrder: PreOrderSettings,
 ): { ok: true; data: ValidatedOrderInput } | { ok: false; error: string } {
-  const phone = body.customerPhone?.trim()
-  const address = body.customerAddress?.trim()
+  const phoneResult = validatePakistaniPhone(body.customerPhone ?? "")
+  if (!phoneResult.ok) {
+    return { ok: false, error: phoneResult.error }
+  }
+
+  const addressResult = validateDeliveryAddress(body.customerAddress ?? "")
+  if (!addressResult.ok) {
+    return { ok: false, error: addressResult.error }
+  }
+
+  const phone = phoneResult.phone
+  const address = addressResult.address
   const paymentImage = body.paymentImage
-
-  if (!phone || phone.length > MAX_PHONE_LEN) {
-    return { ok: false, error: "Invalid phone number" }
-  }
-
-  if (!address || address.length > MAX_ADDRESS_LEN) {
-    return { ok: false, error: "Invalid delivery address" }
-  }
 
   if (!paymentImage || !isDataUrl(paymentImage)) {
     return { ok: false, error: "Payment screenshot is required" }

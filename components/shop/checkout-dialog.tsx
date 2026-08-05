@@ -22,6 +22,11 @@ import { compressImage } from "@/lib/utils/compress-image"
 import { CheckoutAccessoryUpsell } from "@/components/shop/checkout-accessory-upsell"
 import { sendOrderAlertViaFormSubmit } from "@/lib/email/order-notification"
 import type { ShopOrder } from "@/lib/types/order"
+import {
+  formatPhoneDisplay,
+  validateDeliveryAddress,
+  validatePakistaniPhone,
+} from "@/lib/utils/validate-customer"
 
 export function CheckoutDialog() {
   const {
@@ -40,6 +45,8 @@ export function CheckoutDialog() {
 
   const [phone, setPhone] = useState("")
   const [address, setAddress] = useState("")
+  const [phoneError, setPhoneError] = useState("")
+  const [addressError, setAddressError] = useState("")
   const [paymentImage, setPaymentImage] = useState<string | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
   const [error, setError] = useState("")
@@ -67,19 +74,47 @@ export function CheckoutDialog() {
     }
   }
 
+  const verifyPhone = (value: string) => {
+    const result = validatePakistaniPhone(value)
+    if (!result.ok) {
+      setPhoneError(result.error)
+      return false
+    }
+    setPhoneError("")
+    setPhone(formatPhoneDisplay(result.phone))
+    return true
+  }
+
+  const verifyAddress = (value: string) => {
+    const result = validateDeliveryAddress(value)
+    if (!result.ok) {
+      setAddressError(result.error)
+      return false
+    }
+    setAddressError("")
+    setAddress(result.address)
+    return true
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
 
-    if (!phone.trim()) return setError("Enter your phone number")
-    if (!address.trim()) return setError("Enter your delivery address")
+    const phoneOk = verifyPhone(phone)
+    const addressOk = verifyAddress(address)
+    if (!phoneOk || !addressOk) return
+
+    const phoneResult = validatePakistaniPhone(phone)
+    const addressResult = validateDeliveryAddress(address)
+    if (!phoneResult.ok || !addressResult.ok) return
+
     if (!paymentImage) return setError("Upload your payment transfer screenshot")
 
     setSubmitting(true)
     try {
       const payload = {
-        customerPhone: phone.trim(),
-        customerAddress: address.trim(),
+        customerPhone: phoneResult.phone,
+        customerAddress: addressResult.address,
         paymentImage,
         orderType: isPreOrder ? "pre_order" : "standard",
         amountDueNow,
@@ -192,24 +227,51 @@ export function CheckoutDialog() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1.5">Phone Number *</label>
+            <label className="block text-sm font-medium mb-1.5">Mobile Number *</label>
             <Input
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="e.g. 0321 1234567"
+              onChange={(e) => {
+                setPhone(e.target.value)
+                if (phoneError) setPhoneError("")
+              }}
+              onBlur={() => phone.trim() && verifyPhone(phone)}
+              placeholder="0321 1234567"
+              aria-invalid={!!phoneError}
               required
             />
+            {phoneError ? (
+              <p className="text-xs text-red-600 mt-1">{phoneError}</p>
+            ) : (
+              <p className="text-xs text-muted-foreground mt-1">
+                Pakistani mobile only — must start with 03 and be 11 digits
+              </p>
+            )}
           </div>
 
           <div>
             <label className="block text-sm font-medium mb-1.5">Delivery Address *</label>
             <textarea
               value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              placeholder="Full address with city"
+              onChange={(e) => {
+                setAddress(e.target.value)
+                if (addressError) setAddressError("")
+              }}
+              onBlur={() => address.trim() && verifyAddress(address)}
+              placeholder="House 12, Street 5, DHA Phase 5, Karachi"
+              aria-invalid={!!addressError}
               required
               className="w-full min-h-[80px] p-3 bg-input border border-border rounded-lg text-sm resize-y"
             />
+            {addressError ? (
+              <p className="text-xs text-red-600 mt-1">{addressError}</p>
+            ) : (
+              <p className="text-xs text-muted-foreground mt-1">
+                Include street, area, and city so we can deliver
+              </p>
+            )}
           </div>
 
           <div>
