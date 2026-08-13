@@ -2,13 +2,25 @@
 
 import Link from "next/link"
 import { Flame, Timer, ArrowRight } from "lucide-react"
+import useSWR from "swr"
+import type { MascotProduct } from "@/lib/types/mascot"
+import { DEFAULT_PRODUCTS } from "@/lib/constants/products"
 import { formatPrice } from "@/lib/constants/payment"
 import { useShopSettings } from "@/hooks/use-shop-settings"
+import { hasPreOrderProducts } from "@/lib/utils/pre-order"
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
 export function HeroFlashSale() {
   const { preOrder, isReady } = useShopSettings()
+  const { data: products } = useSWR<MascotProduct[]>("/api/mascots", fetcher, {
+    fallbackData: DEFAULT_PRODUCTS,
+    revalidateOnFocus: false,
+  })
 
-  if (!isReady || !preOrder.enabled) return null
+  const list = products ?? DEFAULT_PRODUCTS
+
+  if (!isReady || !hasPreOrderProducts(list, preOrder)) return null
 
   return (
     <Link
@@ -31,11 +43,11 @@ export function HeroFlashSale() {
               </span>
             </div>
             <p className="text-sm sm:text-base font-bold text-foreground leading-snug">
-              Reserve your mascot now — only{" "}
+              Selected mascots open — only{" "}
               <span className="text-primary">PKR {formatPrice(preOrder.advanceAmount)} each</span>
             </p>
             <p className="text-xs sm:text-sm text-muted-foreground mt-1 leading-relaxed">
-              Special pre-order prices · PKR {formatPrice(preOrder.advanceAmount)} advance per mascot in cart
+              Special pre-order prices on marked items · PKR {formatPrice(preOrder.advanceAmount)} advance per pre-order mascot
             </p>
           </div>
           <ArrowRight className="w-5 h-5 text-primary shrink-0 mt-1 group-hover:translate-x-0.5 transition-transform" />

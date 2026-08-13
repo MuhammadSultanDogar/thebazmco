@@ -6,6 +6,8 @@ import { useCart } from "@/hooks/use-cart"
 import { getProductPrimaryImage } from "@/lib/utils/product-images"
 import { getProductEmoji } from "@/lib/constants/products"
 import { formatPrice, FREE_SHIPPING_THRESHOLD } from "@/lib/constants/payment"
+import { useShopSettings } from "@/hooks/use-shop-settings"
+import { isProductPreOrder } from "@/lib/utils/pre-order"
 import {
   Sheet,
   SheetContent,
@@ -32,6 +34,7 @@ export function CartDrawer() {
     removeItem,
     updateQuantity,
   } = useCart()
+  const { preOrder } = useShopSettings()
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && closeCart()}>
@@ -55,6 +58,7 @@ export function CartDrawer() {
               {items.map(({ product, quantity }) => {
                 const image = getProductPrimaryImage(product)
                 const emoji = getProductEmoji(product.id, product.category)
+                const linePreOrder = isProductPreOrder(product, preOrder)
                 return (
                 <div
                   key={product.id}
@@ -78,7 +82,14 @@ export function CartDrawer() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-sm truncate">{product.name}</p>
-                    <p className="text-primary font-bold text-sm">PKR {product.price}</p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-primary font-bold text-sm">PKR {product.price}</p>
+                      {linePreOrder && (
+                        <span className="text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded">
+                          Pre-order
+                        </span>
+                      )}
+                    </div>
                     <div className="flex items-center gap-2 mt-2">
                       <button
                         type="button"
@@ -141,7 +152,7 @@ export function CartDrawer() {
                   </span>
                 </div>
                 <div className="flex justify-between text-base font-bold pt-1 border-t border-primary/10">
-                  <span>{isPreOrder ? "Due now (advance)" : "Total (100% Advance)"}</span>
+                  <span>{isPreOrder ? "Due now" : "Total (100% Advance)"}</span>
                   <span className="text-primary">PKR {formatPrice(amountDueNow)}</span>
                 </div>
                 {isPreOrder && balanceDue > 0 && (
@@ -151,9 +162,14 @@ export function CartDrawer() {
                   </div>
                 )}
                 {isPreOrder && (
-                  <p className="text-xs text-muted-foreground">
-                    Order total: PKR {formatPrice(total)} (incl. shipping when applicable)
-                  </p>
+                  <>
+                    <p className="text-xs text-muted-foreground">
+                      Includes advance for pre-order mascots; in-stock items paid in full now
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Order total: PKR {formatPrice(total)} (incl. shipping when applicable)
+                    </p>
+                  </>
                 )}
               </div>
               <Button onClick={openCheckout} className="w-full h-12 font-bold rounded-xl">

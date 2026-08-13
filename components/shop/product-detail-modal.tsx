@@ -6,6 +6,7 @@ import type { MascotProduct } from "@/lib/types/mascot"
 import { getProductEmoji } from "@/lib/constants/products"
 import { getProductImages } from "@/lib/utils/product-images"
 import { isProductSoldOut } from "@/lib/utils/product-availability"
+import { isProductPreOrder } from "@/lib/utils/pre-order"
 import { SmartProductImage } from "@/components/shop/smart-product-image"
 import { ProductPrice } from "@/components/shop/product-price"
 import { useShopSettings } from "@/hooks/use-shop-settings"
@@ -32,6 +33,7 @@ export function ProductDetailModal({
   const [activeIndex, setActiveIndex] = useState(0)
   const { preOrder } = useShopSettings()
   const soldOut = product ? isProductSoldOut(product) : false
+  const productPreOrder = product ? isProductPreOrder(product, preOrder) : false
 
   if (!product) return null
 
@@ -139,7 +141,7 @@ export function ProductDetailModal({
                 Best Seller
               </span>
             )}
-            {!soldOut && preOrder.enabled && (
+            {!soldOut && productPreOrder && (
               <span className="absolute top-3 right-12 inline-flex items-center gap-1 bg-amber-500 text-white text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full shadow">
                 <CalendarClock className="w-3 h-3" />
                 Pre-order
@@ -186,7 +188,7 @@ export function ProductDetailModal({
           <div className="flex items-end justify-between gap-4 pt-2 border-t border-primary/10">
             <div>
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">
-                {preOrder.enabled && !soldOut ? "Pre-order price" : "Price"}
+                {productPreOrder && !soldOut ? "Pre-order price" : "Price"}
               </p>
               <ProductPrice product={product} size="lg" />
               {product.shipping && product.shipping !== "0" && (
@@ -194,7 +196,7 @@ export function ProductDetailModal({
                   + PKR {product.shipping} shipping
                 </p>
               )}
-              {preOrder.enabled && !soldOut && (
+              {productPreOrder && !soldOut && (
                 <p className="text-xs text-muted-foreground mt-2">
                   ~{preOrder.etaDays} days to stock · Advance is non-refundable
                 </p>
@@ -214,7 +216,7 @@ export function ProductDetailModal({
                 }}
               >
                 <ShoppingCart className="w-4 h-4" />
-                {preOrder.enabled ? "Pre-order" : "Add to Cart"}
+                {productPreOrder ? "Pre-order" : "Add to Cart"}
               </Button>
             )}
           </div>

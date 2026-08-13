@@ -101,6 +101,7 @@ export default function ManagerPage() {
   const [preOrder, setPreOrder] = useState<PreOrderSettings>(DEFAULT_PRE_ORDER)
   const [isSavingPreOrder, setIsSavingPreOrder] = useState(false)
   const [togglingSoldOutId, setTogglingSoldOutId] = useState<string | null>(null)
+  const [togglingPreOrderId, setTogglingPreOrderId] = useState<string | null>(null)
 
   // Invoices
   const [invoices, setInvoices] = useState<Invoice[]>([])
@@ -259,6 +260,30 @@ export default function ManagerPage() {
     }
   }
 
+  const handleTogglePreOrder = async (mascot: MascotProduct) => {
+    if ((mascot.category || "mascot") !== "mascot") return
+    setTogglingPreOrderId(mascot.id)
+    setError("")
+    try {
+      const res = await fetch("/api/mascots", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...mascot, preOrder: !mascot.preOrder }),
+      })
+      if (res.ok) {
+        await fetchMascots()
+        setSuccess(mascot.preOrder ? "Pre-order removed" : "Marked for pre-order")
+        setTimeout(() => setSuccess(""), 2500)
+      } else {
+        setError("Failed to update pre-order status")
+      }
+    } catch {
+      setError("Failed to update pre-order status")
+    } finally {
+      setTogglingPreOrderId(null)
+    }
+  }
+
   const emptyMascot = (): MascotProduct => ({
     id: "",
     name: "",
@@ -272,6 +297,7 @@ export default function ManagerPage() {
     featured: false,
     active: true,
     soldOut: false,
+    preOrder: false,
     sortOrder: mascots.length + 1,
   })
 
@@ -961,7 +987,7 @@ export default function ManagerPage() {
                         </div>
                         <p className="text-sm text-muted-foreground max-w-xl">
                           {preOrder.enabled
-                            ? "Customers see flash sale + pre-order checkout. Advance is charged per mascot in cart."
+                            ? "Turn pre-order on per mascot below. Only marked items show pre-order pricing and advance checkout."
                             : "Normal shop mode — 100% advance at checkout. Flash sale hidden. Toggle back on anytime without losing settings."}
                         </p>
                       </div>
@@ -984,7 +1010,7 @@ export default function ManagerPage() {
                     <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
                       <p className="font-semibold mb-1">Customer policy (shown on site)</p>
                       <p>
-                        Pre-order advance of PKR {preOrder.advanceAmount.toLocaleString("en-PK")} per mascot in cart is{" "}
+                        Pre-order advance of PKR {preOrder.advanceAmount.toLocaleString("en-PK")} per pre-order mascot in cart is{" "}
                         <strong>non-refundable</strong>. Balance is due before dispatch.
                       </p>
                     </div>
@@ -1107,6 +1133,27 @@ export default function ManagerPage() {
                             </div>
                           </div>
                           <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
+                            {preOrder.enabled && mascot.category !== "accessory" && (
+                              <Button
+                                size="sm"
+                                variant={mascot.preOrder ? "default" : "outline"}
+                                disabled={togglingPreOrderId === mascot.id}
+                                onClick={() => handleTogglePreOrder(mascot)}
+                                className={
+                                  mascot.preOrder
+                                    ? "bg-amber-500 text-white hover:bg-amber-600 border-amber-500"
+                                    : ""
+                                }
+                              >
+                                {togglingPreOrderId === mascot.id ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : mascot.preOrder ? (
+                                  "Pre-order"
+                                ) : (
+                                  "Enable Pre-order"
+                                )}
+                              </Button>
+                            )}
                             <Button
                               size="sm"
                               variant={mascot.soldOut ? "default" : "outline"}
@@ -1136,6 +1183,11 @@ export default function ManagerPage() {
                             {mascot.soldOut && (
                               <span className="text-xs px-2 py-1 rounded-full bg-gray-800 text-white">
                                 Sold Out
+                              </span>
+                            )}
+                            {mascot.preOrder && preOrder.enabled && mascot.category !== "accessory" && (
+                              <span className="text-xs px-2 py-1 rounded-full bg-amber-100 text-amber-800">
+                                Pre-order
                               </span>
                             )}
                             {mascot.featured && (
@@ -1267,6 +1319,22 @@ export default function ManagerPage() {
                         <span className="text-sm font-medium">Featured product</span>
                       </label>
                     </div>
+                    {editingMascot.category !== "accessory" && preOrder.enabled && (
+                      <div>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={editingMascot.preOrder ?? false}
+                            onChange={(e) => updateMascotField("preOrder", e.target.checked)}
+                            className="w-4 h-4 accent-primary"
+                          />
+                          <span className="text-sm font-medium">Pre-order item</span>
+                        </label>
+                        <p className="text-xs text-muted-foreground mt-1 ml-6">
+                          Shows pre-order badge and PKR {preOrder.advanceAmount.toLocaleString("en-PK")} advance at checkout
+                        </p>
+                      </div>
+                    )}
                     <div>
                       <label className="flex items-center gap-2 cursor-pointer">
                         <input

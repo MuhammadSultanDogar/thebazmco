@@ -9,6 +9,7 @@ import { FREE_SHIPPING_THRESHOLD, formatPrice, PAYMENT_DETAILS } from "@/lib/con
 import { CONTACT_EMAIL } from "@/lib/constants/contact"
 import { getProductImages, getProductPrimaryImage } from "@/lib/utils/product-images"
 import { isProductSoldOut } from "@/lib/utils/product-availability"
+import { isProductPreOrder, hasPreOrderProducts } from "@/lib/utils/pre-order"
 import { SmartProductImage } from "@/components/shop/smart-product-image"
 import { ScrollReveal } from "@/components/landing/scroll-reveal"
 import { ProductDetailModal } from "@/components/shop/product-detail-modal"
@@ -68,6 +69,7 @@ function ProductCard({
   const { addItem } = useCart()
   const { preOrder } = useShopSettings()
   const soldOut = isProductSoldOut(product)
+  const productPreOrder = isProductPreOrder(product, preOrder)
 
   return (
     <article
@@ -106,7 +108,7 @@ function ProductCard({
             Best Seller
           </span>
         )}
-        {!soldOut && preOrder.enabled && (
+        {!soldOut && productPreOrder && (
           <span className="absolute top-2 right-2 z-10 inline-flex items-center gap-1 bg-amber-500 text-white text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full shadow">
             <CalendarClock className="w-3 h-3" />
             Pre-order
@@ -126,7 +128,7 @@ function ProductCard({
         <div className="flex items-end justify-between gap-2 mb-4">
           <div>
             <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">
-              {preOrder.enabled && !soldOut ? "Pre-order price" : "Price"}
+              {productPreOrder && !soldOut ? "Pre-order price" : "Price"}
             </p>
             <ProductPrice product={product} size="sm" />
           </div>
@@ -146,7 +148,7 @@ function ProductCard({
             className="inline-flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-primary text-primary-foreground text-sm font-bold rounded-xl hover:brightness-105 transition-colors"
           >
             <ShoppingCart className="w-4 h-4" />
-            {preOrder.enabled ? "Pre-order" : "Add to Cart"}
+            {productPreOrder ? "Pre-order" : "Add to Cart"}
           </button>
         )}
       </div>
@@ -206,6 +208,7 @@ export function MascotsShop() {
   const list = products ?? DEFAULT_PRODUCTS
   const mascots = list.filter((p) => (p.category || "mascot") === "mascot")
   const accessories = list.filter((p) => p.category === "accessory")
+  const hasPreOrderItems = hasPreOrderProducts(list, preOrder)
 
   return (
     <>
@@ -234,14 +237,16 @@ export function MascotsShop() {
                 <div className="flex items-center gap-2 px-4 py-3 bg-primary/10 text-primary border border-primary/20 rounded-xl text-sm font-medium">
                   <CreditCard className="w-4 h-4 shrink-0" />
                   <span>
-                    {preOrder.enabled ? "Pre-order open — reserve with advance" : "100% advance payment required"}
+                    {hasPreOrderItems
+                      ? "Pre-order open on selected mascots"
+                      : "100% advance payment required"}
                   </span>
                 </div>
               </div>
             </div>
           </ScrollReveal>
 
-          <PreOrderBanner />
+          <PreOrderBanner products={list} />
 
           <ProductGrid
             title="Inflatable Mascots"

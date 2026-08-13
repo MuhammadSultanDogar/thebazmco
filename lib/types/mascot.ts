@@ -22,6 +22,8 @@ export interface MascotProduct {
   featured: boolean
   active: boolean
   soldOut?: boolean
+  /** When global pre-order is on, this mascot uses pre-order pricing & advance checkout */
+  preOrder?: boolean
   /** Shown crossed out during pre-order when set */
   originalPrice?: string
   sortOrder: number
@@ -45,4 +47,5 @@ export const createEmptyProduct = (): Omit<MascotProduct, "id" | "sortOrder"> =>
   featured: false,
   active: true,
   soldOut: false,
+  preOrder: false,
 })

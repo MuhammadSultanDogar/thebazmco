@@ -2,17 +2,19 @@
 
 import type { MascotProduct } from "@/lib/types/mascot"
 import { useShopSettings } from "@/hooks/use-shop-settings"
+import { isProductPreOrder } from "@/lib/utils/pre-order"
 
 export function ProductPrice({
   product,
   size = "md",
 }: {
-  product: Pick<MascotProduct, "price" | "originalPrice">
+  product: Pick<MascotProduct, "price" | "originalPrice" | "category" | "preOrder">
   size?: "sm" | "md" | "lg"
 }) {
   const { preOrder } = useShopSettings()
+  const productPreOrder = isProductPreOrder(product, preOrder)
   const showCompare =
-    preOrder.enabled && product.originalPrice && product.originalPrice !== product.price
+    productPreOrder && product.originalPrice && product.originalPrice !== product.price
 
   const priceClass =
     size === "lg"

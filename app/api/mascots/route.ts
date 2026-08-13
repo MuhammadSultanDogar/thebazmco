@@ -42,6 +42,7 @@ export async function GET(request: Request) {
         featured: normalized.featured,
         active: normalized.active,
         soldOut: normalized.soldOut,
+        preOrder: normalized.preOrder,
         originalPrice: normalized.originalPrice,
         sortOrder: normalized.sortOrder,
       }
@@ -91,6 +92,7 @@ export async function POST(request: Request) {
         featured: body.featured ?? false,
         active: body.active ?? true,
         soldOut: body.soldOut ?? false,
+        preOrder: body.preOrder ?? false,
         originalPrice: body.originalPrice,
         sortOrder: site.mascots.length + 1,
       })

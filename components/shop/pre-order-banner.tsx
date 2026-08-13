@@ -1,12 +1,18 @@
 "use client"
 
 import { CalendarClock, Sparkles } from "lucide-react"
+import type { MascotProduct } from "@/lib/types/mascot"
 import { useShopSettings } from "@/hooks/use-shop-settings"
+import { hasPreOrderProducts } from "@/lib/utils/pre-order"
 
-export function PreOrderBanner() {
+export function PreOrderBanner({
+  products = [],
+}: {
+  products?: Pick<MascotProduct, "category" | "preOrder" | "active">[]
+}) {
   const { preOrder, isReady } = useShopSettings()
 
-  if (!isReady || !preOrder.enabled) return null
+  if (!isReady || !hasPreOrderProducts(products, preOrder)) return null
 
   return (
     <div className="mb-6 lg:mb-8 rounded-2xl border-2 border-primary/25 bg-gradient-to-r from-primary/10 via-white to-primary/5 p-4 sm:p-5 shadow-sm">

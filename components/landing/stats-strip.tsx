@@ -1,14 +1,27 @@
 "use client"
 
+import useSWR from "swr"
+import type { MascotProduct } from "@/lib/types/mascot"
+import { DEFAULT_PRODUCTS } from "@/lib/constants/products"
 import { useShopSettings } from "@/hooks/use-shop-settings"
+import { hasPreOrderProducts } from "@/lib/utils/pre-order"
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
 export function StatsStrip() {
   const { preOrder } = useShopSettings()
+  const { data: products } = useSWR<MascotProduct[]>("/api/mascots", fetcher, {
+    fallbackData: DEFAULT_PRODUCTS,
+    revalidateOnFocus: false,
+  })
+
+  const list = products ?? DEFAULT_PRODUCTS
+  const showPreOrderStat = hasPreOrderProducts(list, preOrder)
 
   const stats = [
     { value: "Nationwide", label: "Delivery Across Pakistan" },
     { value: "Shop", label: "Inflatable Mascots & Accessories" },
-    preOrder.enabled
+    showPreOrderStat
       ? {
           value: preOrder.advanceAmount >= 1000 ? `${preOrder.advanceAmount / 1000}k` : String(preOrder.advanceAmount),
           label: "Pre-order Advance Per Mascot",
