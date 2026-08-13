@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Plus_Jakarta_Sans, Inter } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { AppProviders } from '@/components/providers/app-providers'
+import { SpatiolensCredit } from '@/components/landing/spatiolens-credit'
 import { loadSiteConfig } from '@/lib/store'
 import { DEFAULT_PRE_ORDER } from '@/lib/types/pre-order'
 import { SEO_KEYWORDS, SITE_DESCRIPTION, SITE_NAME, SITE_URL } from '@/lib/seo/site'
@@ -94,6 +95,7 @@ export default async function RootLayout({
       <body className="font-sans antialiased">
         <AppProviders initialPreOrder={initialPreOrder}>
           {children}
+          <SpatiolensCredit />
         </AppProviders>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>

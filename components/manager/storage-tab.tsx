@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import {
+  MousePointerClick,
   Database,
   Download,
   Upload,
@@ -12,6 +13,7 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { SiteData, StorageInfo } from "@/lib/types/site-data"
+import type { SpatiolensClickStats } from "@/lib/store/spatiolens-clicks"
 
 function formatBytes(bytes: number | null) {
   if (bytes == null) return "—"
@@ -34,18 +36,23 @@ export function StorageTab() {
   const [loading, setLoading] = useState(true)
   const [importing, setImporting] = useState(false)
   const [message, setMessage] = useState("")
+  const [spatiolensClicks, setSpatiolensClicks] = useState<SpatiolensClickStats | null>(
+    null,
+  )
   const fileRef = useRef<HTMLInputElement>(null)
 
   const load = async () => {
     setLoading(true)
     try {
-      const [infoRes, exportRes] = await Promise.all([
+      const [infoRes, exportRes, clicksRes] = await Promise.all([
         fetch("/api/store"),
         fetch("/api/store?mode=export"),
+        fetch("/api/spatiolens-click"),
       ])
 
       if (infoRes.ok) setInfo(await infoRes.json())
       if (exportRes.ok) setPreview(await exportRes.json())
+      if (clicksRes.ok) setSpatiolensClicks(await clicksRes.json())
     } finally {
       setLoading(false)
     }
@@ -199,6 +206,30 @@ export function StorageTab() {
         </div>
 
         {message && <p className="text-sm text-primary font-medium">{message}</p>}
+      </div>
+
+      <div className="bg-card rounded-2xl p-6 border border-border space-y-4">
+        <div>
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <MousePointerClick className="w-5 h-5 text-primary" />
+            Spatiolens credit clicks
+          </h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Tracks unique visitors who click the floating &quot;Designed by Spatiolens&quot; link.
+          </p>
+        </div>
+        <div className="grid sm:grid-cols-2 gap-3">
+          <div className="rounded-xl border border-border p-4 bg-background">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Unique visitors</p>
+            <p className="text-2xl font-bold text-primary mt-1">
+              {spatiolensClicks?.uniqueClicks ?? 0}
+            </p>
+          </div>
+          <div className="rounded-xl border border-border p-4 bg-background">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Total clicks</p>
+            <p className="text-2xl font-bold mt-1">{spatiolensClicks?.totalClicks ?? 0}</p>
+          </div>
+        </div>
       </div>
 
       {preview && (
