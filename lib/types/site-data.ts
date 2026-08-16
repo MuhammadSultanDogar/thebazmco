@@ -1,6 +1,7 @@
 import type { MascotProduct } from "@/lib/types/mascot"
 import type { PreOrderSettings } from "@/lib/types/pre-order"
 import type { OrderNotificationSettings } from "@/lib/types/order-notifications"
+import type { ShippingSettings } from "@/lib/types/shipping-settings"
 import type { ShopOrder } from "@/lib/types/order"
 import type { Invoice } from "@/lib/types/invoice"
 
@@ -15,6 +16,7 @@ export type SiteData = {
   rates: PerformanceRates
   terms: string
   preOrder: PreOrderSettings
+  shippingSettings: ShippingSettings
   orderNotifications: OrderNotificationSettings
   orders: ShopOrder[]
   invoices: Invoice[]

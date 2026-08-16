@@ -1,10 +1,11 @@
 import type { MascotProduct } from "@/lib/types/mascot"
 import type { OrderLineItem } from "@/lib/types/order"
 import type { PreOrderSettings } from "@/lib/types/pre-order"
-import { FREE_SHIPPING_THRESHOLD, parsePrice } from "@/lib/constants/payment"
-import { isProductSoldOut } from "@/lib/utils/product-availability"
-import { calculatePreOrderPayment } from "@/lib/utils/pre-order-payment"
+import { DEFAULT_SHIPPING_SETTINGS } from "@/lib/types/shipping-settings"
 import { isDataUrl } from "@/lib/utils/compress-image"
+import { calculateOrderTotals } from "@/lib/utils/order-totals"
+import { calculatePreOrderPayment } from "@/lib/utils/pre-order-payment"
+import { isProductSoldOut } from "@/lib/utils/product-availability"
 import {
   validateDeliveryAddress,
   validatePakistaniPhone,
@@ -46,29 +47,11 @@ const MAX_ITEMS = 20
 const MAX_ITEM_QTY = 10
 const MAX_PAYMENT_IMAGE_BYTES = 2_500_000
 
-function calculateTotals(
-  items: { product: MascotProduct; quantity: number }[],
-) {
-  const subtotal = items.reduce(
-    (sum, item) => sum + parsePrice(item.product.price) * item.quantity,
-    0,
-  )
-
-  const freeShipping = subtotal >= FREE_SHIPPING_THRESHOLD
-  const shipping = freeShipping
-    ? 0
-    : items.reduce((max, item) => {
-        const ship = parsePrice(item.product.shipping)
-        return Math.max(max, ship)
-      }, 0)
-
-  return { subtotal, shipping, total: subtotal + shipping, freeShipping }
-}
-
 export function validateOrderPayload(
   body: OrderPayload,
   mascots: MascotProduct[],
   preOrder: PreOrderSettings,
+  freeShippingMinimum = DEFAULT_SHIPPING_SETTINGS.freeShippingMinimum,
 ): { ok: true; data: ValidatedOrderInput } | { ok: false; error: string } {
   const phoneResult = validatePakistaniPhone(body.customerPhone ?? "")
   if (!phoneResult.ok) {
@@ -132,12 +115,16 @@ export function validateOrderPayload(
     resolvedItems.push({ product, quantity })
   }
 
-  const totals = calculateTotals(resolvedItems)
+  const totals = calculateOrderTotals(resolvedItems, freeShippingMinimum)
   const preOrderPayment = calculatePreOrderPayment(resolvedItems, preOrder, totals.total)
   const { isPreOrder, amountDueNow, balanceDue } = preOrderPayment
 
   if (body.subtotal !== undefined && body.subtotal !== totals.subtotal) {
     return { ok: false, error: "Subtotal mismatch — refresh and try again" }
+  }
+
+  if (body.shipping !== undefined && body.shipping !== totals.shipping) {
+    return { ok: false, error: "Shipping mismatch — refresh and try again" }
   }
 
   if (body.total !== undefined && body.total !== totals.total) {

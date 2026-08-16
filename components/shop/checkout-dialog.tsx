@@ -22,6 +22,7 @@ import { compressImage } from "@/lib/utils/compress-image"
 import { CheckoutAccessoryUpsell } from "@/components/shop/checkout-accessory-upsell"
 import { sendOrderAlertViaFormSubmit } from "@/lib/email/order-notification"
 import type { ShopOrder } from "@/lib/types/order"
+import { useShopSettings } from "@/hooks/use-shop-settings"
 import {
   formatPhoneDisplay,
   validateDeliveryAddress,
@@ -42,6 +43,7 @@ export function CheckoutDialog() {
     amountDueNow,
     balanceDue,
   } = useCart()
+  const { freeShippingMinimum } = useShopSettings()
 
   const [phone, setPhone] = useState("")
   const [address, setAddress] = useState("")
@@ -166,7 +168,7 @@ export function CheckoutDialog() {
       setPaymentImage(null)
       setPreview(null)
 
-      const msg = buildWhatsAppOrderMessage(order)
+      const msg = buildWhatsAppOrderMessage({ ...order, freeShippingMinimum })
       window.location.href = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong")

@@ -17,24 +17,7 @@ export function formatPrice(amount: number): string {
   return amount.toLocaleString("en-PK")
 }
 
-export function calculateOrderTotals(items: { product: { price: string; shipping: string }; quantity: number }[]) {
-  const subtotal = items.reduce(
-    (sum, item) => sum + parsePrice(item.product.price) * item.quantity,
-    0
-  )
-
-  const freeShipping = subtotal >= FREE_SHIPPING_THRESHOLD
-  const shipping = freeShipping
-    ? 0
-    : items.reduce((max, item) => {
-        const ship = parsePrice(item.product.shipping)
-        return Math.max(max, ship)
-      }, 0)
-
-  const total = subtotal + shipping
-
-  return { subtotal, shipping, total, freeShipping }
-}
+export { calculateOrderTotals, calculateLineShipping } from "@/lib/utils/order-totals"
 
 export function buildWhatsAppOrderMessage(order: {
   orderNumber: string
@@ -45,6 +28,7 @@ export function buildWhatsAppOrderMessage(order: {
   shipping: number
   total: number
   freeShipping: boolean
+  freeShippingMinimum?: number
   orderType?: "standard" | "pre_order"
   amountDueNow?: number
   balanceDue?: number
@@ -61,7 +45,7 @@ export function buildWhatsAppOrderMessage(order: {
     "",
     `Subtotal: PKR ${formatPrice(order.subtotal)}`,
     order.freeShipping
-      ? "Shipping: FREE (order above PKR 10,000)"
+      ? `Shipping: FREE (order at or above PKR ${formatPrice(order.freeShippingMinimum ?? 10000)})`
       : `Shipping: PKR ${formatPrice(order.shipping)}`,
     `Order total: PKR ${formatPrice(order.total)}`,
     "",

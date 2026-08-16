@@ -1,8 +1,10 @@
 import { DEFAULT_PRODUCTS } from "@/lib/constants/products"
 import { DEFAULT_PRE_ORDER } from "@/lib/types/pre-order"
+import { DEFAULT_SHIPPING_SETTINGS } from "@/lib/types/shipping-settings"
 import { DEFAULT_ORDER_NOTIFICATIONS, normalizeOrderNotifications } from "@/lib/types/order-notifications"
 import type { SiteData } from "@/lib/types/site-data"
 import type { PreOrderSettings } from "@/lib/types/pre-order"
+import type { ShippingSettings } from "@/lib/types/shipping-settings"
 import { normalizeMascotList } from "@/lib/utils/product-images"
 
 export const DEFAULT_TERMS = `A 50% advance payment is required to confirm the booking.
@@ -28,6 +30,7 @@ export function createDefaultSiteData(): SiteData {
     rates: { ...DEFAULT_RATES },
     terms: DEFAULT_TERMS,
     preOrder: { ...DEFAULT_PRE_ORDER },
+    shippingSettings: { ...DEFAULT_SHIPPING_SETTINGS },
     orderNotifications: { ...DEFAULT_ORDER_NOTIFICATIONS },
     orders: [],
     invoices: [],
@@ -50,6 +53,21 @@ function normalizePreOrder(raw: Partial<PreOrderSettings> | undefined): PreOrder
   }
 }
 
+function normalizeShippingSettings(
+  raw: Partial<ShippingSettings> | undefined,
+): ShippingSettings {
+  const defaults = DEFAULT_SHIPPING_SETTINGS
+  if (!raw) return { ...defaults }
+
+  const minimum = Number(raw.freeShippingMinimum)
+  return {
+    freeShippingMinimum:
+      Number.isFinite(minimum) && minimum >= 0
+        ? Math.round(minimum)
+        : defaults.freeShippingMinimum,
+  }
+}
+
 export function normalizeSiteData(raw: Partial<SiteData> | null | undefined): SiteData {
   const defaults = createDefaultSiteData()
   if (!raw) return defaults
@@ -61,6 +79,7 @@ export function normalizeSiteData(raw: Partial<SiteData> | null | undefined): Si
     rates: raw.rates ?? defaults.rates,
     terms: raw.terms ?? defaults.terms,
     preOrder: normalizePreOrder(raw.preOrder),
+    shippingSettings: normalizeShippingSettings(raw.shippingSettings),
     orderNotifications: normalizeOrderNotifications(raw.orderNotifications),
     orders: Array.isArray(raw.orders) ? raw.orders : defaults.orders,
     invoices: Array.isArray(raw.invoices) ? raw.invoices : defaults.invoices,

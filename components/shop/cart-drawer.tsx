@@ -5,7 +5,7 @@ import { Minus, Plus, ShoppingCart, Trash2, Truck, X } from "lucide-react"
 import { useCart } from "@/hooks/use-cart"
 import { getProductPrimaryImage } from "@/lib/utils/product-images"
 import { getProductEmoji } from "@/lib/constants/products"
-import { formatPrice, FREE_SHIPPING_THRESHOLD } from "@/lib/constants/payment"
+import { formatPrice } from "@/lib/constants/payment"
 import { useShopSettings } from "@/hooks/use-shop-settings"
 import { isProductPreOrder } from "@/lib/utils/pre-order"
 import {
@@ -34,7 +34,7 @@ export function CartDrawer() {
     removeItem,
     updateQuantity,
   } = useCart()
-  const { preOrder } = useShopSettings()
+  const { preOrder, freeShippingMinimum } = useShopSettings()
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && closeCart()}>
@@ -130,7 +130,7 @@ export function CartDrawer() {
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Free delivery on orders above PKR {formatPrice(FREE_SHIPPING_THRESHOLD)}
+                  Free delivery on orders above PKR {formatPrice(freeShippingMinimum)}
                 </p>
               </div>
             </div>

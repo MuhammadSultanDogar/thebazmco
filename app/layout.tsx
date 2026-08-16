@@ -5,6 +5,7 @@ import { AppProviders } from '@/components/providers/app-providers'
 import { SpatiolensCredit } from '@/components/landing/spatiolens-credit'
 import { loadSiteConfig } from '@/lib/store'
 import { DEFAULT_PRE_ORDER } from '@/lib/types/pre-order'
+import { DEFAULT_SHIPPING_SETTINGS } from '@/lib/types/shipping-settings'
 import { SEO_KEYWORDS, SITE_DESCRIPTION, SITE_NAME, SITE_URL } from '@/lib/seo/site'
 import './globals.css'
 
@@ -83,9 +84,11 @@ export default async function RootLayout({
   children: React.ReactNode
 }>) {
   let initialPreOrder = DEFAULT_PRE_ORDER
+  let initialShippingSettings = DEFAULT_SHIPPING_SETTINGS
   try {
     const config = await loadSiteConfig()
     initialPreOrder = config.preOrder ?? DEFAULT_PRE_ORDER
+    initialShippingSettings = config.shippingSettings ?? DEFAULT_SHIPPING_SETTINGS
   } catch {
     /* use defaults */
   }
@@ -93,7 +96,10 @@ export default async function RootLayout({
   return (
     <html lang="en" className={`${jakarta.variable} ${inter.variable}`}>
       <body className="font-sans antialiased">
-        <AppProviders initialPreOrder={initialPreOrder}>
+        <AppProviders
+          initialPreOrder={initialPreOrder}
+          initialShippingSettings={initialShippingSettings}
+        >
           {children}
           <SpatiolensCredit />
         </AppProviders>

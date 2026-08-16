@@ -29,6 +29,8 @@ import { StorageTab } from "@/components/manager/storage-tab"
 import type { MascotProduct, MascotAccessory } from "@/lib/types/mascot"
 import type { PreOrderSettings } from "@/lib/types/pre-order"
 import { DEFAULT_PRE_ORDER } from "@/lib/types/pre-order"
+import type { ShippingSettings } from "@/lib/types/shipping-settings"
+import { DEFAULT_SHIPPING_SETTINGS } from "@/lib/types/shipping-settings"
 
 
 interface Invoice {
@@ -99,6 +101,9 @@ export default function ManagerPage() {
   const [showMascotForm, setShowMascotForm] = useState(false)
   const [isSavingMascot, setIsSavingMascot] = useState(false)
   const [preOrder, setPreOrder] = useState<PreOrderSettings>(DEFAULT_PRE_ORDER)
+  const [shippingSettings, setShippingSettings] = useState<ShippingSettings>(
+    DEFAULT_SHIPPING_SETTINGS,
+  )
   const [isSavingPreOrder, setIsSavingPreOrder] = useState(false)
   const [togglingSoldOutId, setTogglingSoldOutId] = useState<string | null>(null)
   const [togglingPreOrderId, setTogglingPreOrderId] = useState<string | null>(null)
@@ -207,6 +212,7 @@ export default function ManagerPage() {
       if (res.ok) {
         const data = await res.json()
         if (data.preOrder) setPreOrder(data.preOrder)
+        if (data.shippingSettings) setShippingSettings(data.shippingSettings)
       }
     } catch {
       console.error("Failed to fetch shop settings")
@@ -220,12 +226,13 @@ export default function ManagerPage() {
       const res = await fetch("/api/shop-settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ preOrder }),
+        body: JSON.stringify({ preOrder, shippingSettings }),
       })
       if (res.ok) {
         const data = await res.json()
         setPreOrder(data.preOrder)
-        setSuccess("Pre-order settings saved!")
+        setShippingSettings(data.shippingSettings)
+        setSuccess("Shop settings saved!")
         setTimeout(() => setSuccess(""), 3000)
       } else {
         setError("Failed to save pre-order settings")
@@ -964,6 +971,35 @@ export default function ManagerPage() {
             {!showMascotForm ? (
               <>
                 <div className="bg-card rounded-2xl p-6 border-2 border-border space-y-4">
+                  <div className="rounded-xl p-4 border-2 border-primary/20 bg-primary/5">
+                    <h2 className="font-semibold mb-1">Shipping</h2>
+                    <p className="text-sm text-muted-foreground mb-4 max-w-xl">
+                      Each product has its own shipping charge (per unit). Below that subtotal, shipping
+                      is added per item × quantity. At or above the minimum, shipping is free.
+                    </p>
+                    <div className="max-w-xs">
+                      <label className="block text-sm font-medium mb-2">
+                        Free shipping minimum (PKR subtotal)
+                      </label>
+                      <Input
+                        type="number"
+                        min={0}
+                        value={shippingSettings.freeShippingMinimum}
+                        onChange={(e) =>
+                          setShippingSettings({
+                            ...shippingSettings,
+                            freeShippingMinimum: Number(e.target.value) || 0,
+                          })
+                        }
+                      />
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Default is PKR 10,000. Set to 0 to always charge shipping.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-card rounded-2xl p-6 border-2 border-border space-y-4">
                   <div
                     className={`rounded-xl p-4 border-2 ${
                       preOrder.enabled
@@ -1076,7 +1112,7 @@ export default function ManagerPage() {
                     ) : (
                       <>
                         <Save className="w-4 h-4 mr-2" />
-                        Save Pre-order Settings
+                        Save Shop Settings
                       </>
                     )}
                   </Button>
@@ -1119,7 +1155,7 @@ export default function ManagerPage() {
                               <p className="font-medium truncate">{mascot.name}</p>
                               <p className="text-sm text-muted-foreground">
                                 PKR {mascot.price}
-                                {mascot.shipping ? ` · Shipping PKR ${mascot.shipping}` : ""}
+                                {mascot.shipping ? ` · PKR ${mascot.shipping} shipping/unit` : ""}
                               </p>
                               <span
                                 className={`inline-block mt-1 text-xs px-2 py-0.5 rounded-full ${
@@ -1265,7 +1301,9 @@ export default function ManagerPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-2">Shipping (PKR)</label>
+                      <label className="block text-sm font-medium mb-2">
+                        Shipping per unit (PKR)
+                      </label>
                       <Input
                         value={editingMascot.shipping}
                         onChange={(e) => updateMascotField("shipping", e.target.value)}

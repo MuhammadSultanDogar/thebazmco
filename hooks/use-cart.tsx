@@ -11,7 +11,7 @@ import {
 } from "react"
 import type { CartItem } from "@/lib/types/order"
 import type { MascotProduct } from "@/lib/types/mascot"
-import { calculateOrderTotals } from "@/lib/constants/payment"
+import { calculateOrderTotals } from "@/lib/utils/order-totals"
 import { isProductSoldOut } from "@/lib/utils/product-availability"
 import { calculatePreOrderPayment } from "@/lib/utils/pre-order-payment"
 import { useShopSettings } from "@/components/providers/shop-settings-provider"
@@ -47,7 +47,7 @@ const CartContext = createContext<CartContextValue | null>(null)
 const STORAGE_KEY = "thebazm-cart"
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const { preOrder } = useShopSettings()
+  const { preOrder, freeShippingMinimum } = useShopSettings()
   const [items, setItems] = useState<CartItem[]>([])
   const [isOpen, setIsOpen] = useState(false)
   const [checkoutOpen, setCheckoutOpen] = useState(false)
@@ -98,9 +98,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const clearCart = useCallback(() => setItems([]), [])
 
-  const totals = useMemo(() => calculateOrderTotals(items), [items])
+  const totals = useMemo(
+    () => calculateOrderTotals(items, freeShippingMinimum),
+    [items, freeShippingMinimum],
+  )
   const itemCount = useMemo(() => items.reduce((s, i) => s + i.quantity, 0), [items])
-  const amountToFreeShipping = Math.max(0, 10000 - totals.subtotal)
+  const amountToFreeShipping = Math.max(0, freeShippingMinimum - totals.subtotal)
   const preOrderPayment = useMemo(
     () => calculatePreOrderPayment(items, preOrder, totals.total),
     [items, preOrder, totals.total],

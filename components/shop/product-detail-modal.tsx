@@ -193,7 +193,7 @@ export function ProductDetailModal({
               <ProductPrice product={product} size="lg" />
               {product.shipping && product.shipping !== "0" && (
                 <p className="text-xs text-muted-foreground mt-1">
-                  + PKR {product.shipping} shipping
+                  + PKR {product.shipping} shipping per unit
                 </p>
               )}
               {productPreOrder && !soldOut && (

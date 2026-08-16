@@ -60,7 +60,12 @@ export async function POST(request: Request) {
   try {
     const body = await request.json()
     const site = await loadSiteData()
-    const validation = validateOrderPayload(body, site.mascots, site.preOrder)
+    const validation = validateOrderPayload(
+      body,
+      site.mascots,
+      site.preOrder,
+      site.shippingSettings?.freeShippingMinimum,
+    )
 
     if (!validation.ok) {
       return secureJson({ error: validation.error }, { status: 400 })

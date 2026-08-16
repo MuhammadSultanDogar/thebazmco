@@ -5,7 +5,7 @@ import { ShoppingCart, Sparkles, Zap, Truck, CreditCard, CalendarClock } from "l
 import useSWR from "swr"
 import type { MascotProduct } from "@/lib/types/mascot"
 import { DEFAULT_PRODUCTS, getProductEmoji } from "@/lib/constants/products"
-import { FREE_SHIPPING_THRESHOLD, formatPrice, PAYMENT_DETAILS } from "@/lib/constants/payment"
+import { formatPrice, PAYMENT_DETAILS } from "@/lib/constants/payment"
 import { CONTACT_EMAIL } from "@/lib/constants/contact"
 import { getProductImages, getProductPrimaryImage } from "@/lib/utils/product-images"
 import { isProductSoldOut } from "@/lib/utils/product-availability"
@@ -198,7 +198,7 @@ function ProductGrid({
 export function MascotsShop() {
   const [detailProduct, setDetailProduct] = useState<MascotProduct | null>(null)
   const { addItem } = useCart()
-  const { preOrder } = useShopSettings()
+  const { preOrder, freeShippingMinimum } = useShopSettings()
 
   const { data: products } = useSWR<MascotProduct[]>("/api/mascots", fetcher, {
     fallbackData: DEFAULT_PRODUCTS,
@@ -231,7 +231,7 @@ export function MascotsShop() {
                   <Truck className="w-4 h-4 text-primary shrink-0" />
                   <span>
                     Free shipping on orders{" "}
-                    <strong>above PKR {formatPrice(FREE_SHIPPING_THRESHOLD)}</strong>
+                    <strong>above PKR {formatPrice(freeShippingMinimum)}</strong>
                   </span>
                 </div>
                 <div className="flex items-center gap-2 px-4 py-3 bg-primary/10 text-primary border border-primary/20 rounded-xl text-sm font-medium">
