@@ -17,6 +17,7 @@ import {
 import { enforceRateLimit } from "@/lib/security/rate-limit"
 import { validateOrderPayload } from "@/lib/security/validate-order"
 import { secureJson } from "@/lib/security/headers"
+import { createOrderInvoiceToken } from "@/lib/utils/order-invoice-token"
 
 export const dynamic = "force-dynamic"
 
@@ -90,6 +91,7 @@ export async function POST(request: Request) {
       orderType: data.orderType,
       amountDueNow: data.amountDueNow,
       balanceDue: data.balanceDue,
+      invoiceToken: createOrderInvoiceToken(),
     }
 
     const nextConfig = {

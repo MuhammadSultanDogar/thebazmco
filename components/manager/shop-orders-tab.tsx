@@ -1,15 +1,17 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useRef, useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Eye, Trash2, Truck, Check, X, Loader2, Download, Mail, Save } from "lucide-react"
+import { Eye, Trash2, Truck, Check, X, Loader2, Download, Mail, Save, Printer, FileText } from "lucide-react"
 import type { ShopOrder, OrderStatus } from "@/lib/types/order"
 import type { OrderNotificationSettings } from "@/lib/types/order-notifications"
 import { DEFAULT_ORDER_NOTIFICATIONS } from "@/lib/types/order-notifications"
 import { formatPrice } from "@/lib/constants/payment"
 import { countOrdersByStatus, downloadOrdersCsv } from "@/lib/utils/orders-csv"
 import { requestOrderAlertPermission } from "@/components/manager/order-alert-poller"
+import { ShopOrderInvoiceTemplate } from "@/components/shop-order-invoice-template"
+import { downloadOrderInvoicePdf, printOrderInvoice } from "@/lib/utils/download-order-invoice"
 
 const statusColors: Record<OrderStatus, string> = {
   pending_review: "bg-orange-100 text-orange-700",
@@ -47,6 +49,19 @@ export function ShopOrdersTab() {
   const [isSavingNotifications, setIsSavingNotifications] = useState(false)
   const [notificationMessage, setNotificationMessage] = useState("")
   const [notificationError, setNotificationError] = useState("")
+  const [showInvoice, setShowInvoice] = useState(false)
+  const [isDownloadingInvoice, setIsDownloadingInvoice] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+  const invoiceRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768 || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent))
+    }
+    checkMobile()
+    window.addEventListener("resize", checkMobile)
+    return () => window.removeEventListener("resize", checkMobile)
+  }, [])
 
   const fetchNotifications = async () => {
     try {
@@ -123,7 +138,10 @@ export function ShopOrdersTab() {
       if (res.ok) {
         const updated = await res.json()
         setOrders((prev) => prev.map((o) => (o.id === order.id ? updated : o)))
-        if (viewing?.id === order.id) setViewing(updated)
+        if (viewing?.id === order.id) {
+          setViewing(updated)
+          setShowInvoice(false)
+        }
       }
     } catch {
       console.error("Failed to update order")
@@ -136,7 +154,10 @@ export function ShopOrdersTab() {
       const res = await fetch(`/api/orders?id=${id}`, { method: "DELETE" })
       if (res.ok) {
         setOrders((prev) => prev.filter((o) => o.id !== id))
-        if (viewing?.id === id) setViewing(null)
+        if (viewing?.id === id) {
+          setViewing(null)
+          setShowInvoice(false)
+        }
       }
     } catch {
       console.error("Failed to delete order")
@@ -146,6 +167,61 @@ export function ShopOrdersTab() {
   const handleExportCsv = () => {
     const suffix = statusFilter === "all" ? "all" : statusFilter
     downloadOrdersCsv(filteredOrders, `thebazm-orders-${suffix}`)
+  }
+
+  const handleDownloadInvoice = async (order: ShopOrder) => {
+    setIsDownloadingInvoice(true)
+    try {
+      await downloadOrderInvoicePdf(order)
+    } catch (err) {
+      console.error(err)
+      alert("Failed to download invoice PDF")
+    } finally {
+      setIsDownloadingInvoice(false)
+    }
+  }
+
+  const handlePrintInvoice = () => {
+    if (!viewing || !invoiceRef.current) return
+    printOrderInvoice(invoiceRef.current, viewing.orderNumber)
+  }
+
+  if (viewing && showInvoice) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <Button
+            variant="outline"
+            onClick={() => setShowInvoice(false)}
+          >
+            ← Back to Order
+          </Button>
+          <div className="flex gap-2">
+            {isMobile ? (
+              <Button
+                onClick={() => void handleDownloadInvoice(viewing)}
+                disabled={isDownloadingInvoice}
+              >
+                {isDownloadingInvoice ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Download className="w-4 h-4 mr-2" />
+                )}
+                Download PDF
+              </Button>
+            ) : (
+              <Button onClick={handlePrintInvoice}>
+                <Printer className="w-4 h-4 mr-2" />
+                Print Invoice
+              </Button>
+            )}
+          </div>
+        </div>
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+          <ShopOrderInvoiceTemplate ref={invoiceRef} order={viewing} />
+        </div>
+      </div>
+    )
   }
 
   if (viewing) {
@@ -228,6 +304,23 @@ export function ShopOrdersTab() {
           </div>
 
           <div className="flex flex-wrap gap-2 pt-2">
+            <Button variant="outline" onClick={() => setShowInvoice(true)} className="gap-2">
+              <FileText className="w-4 h-4" />
+              View Invoice
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => void handleDownloadInvoice(viewing)}
+              disabled={isDownloadingInvoice}
+              className="gap-2"
+            >
+              {isDownloadingInvoice ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Download className="w-4 h-4" />
+              )}
+              Download Invoice
+            </Button>
             {viewing.status === "pending_review" && (
               <>
                 <Button onClick={() => updateStatus(viewing, "approved")} className="gap-2">

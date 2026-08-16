@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef } from "react"
-import { Loader2, Upload, CreditCard, MessageCircle, X } from "lucide-react"
+import { Loader2, Upload, CreditCard, MessageCircle, X, Download, CheckCircle2 } from "lucide-react"
 import { useCart } from "@/hooks/use-cart"
 import {
   PAYMENT_DETAILS,
@@ -23,6 +23,7 @@ import { CheckoutAccessoryUpsell } from "@/components/shop/checkout-accessory-up
 import { sendOrderAlertViaFormSubmit } from "@/lib/email/order-notification"
 import type { ShopOrder } from "@/lib/types/order"
 import { useShopSettings } from "@/hooks/use-shop-settings"
+import { downloadOrderInvoicePdf } from "@/lib/utils/download-order-invoice"
 import {
   formatPhoneDisplay,
   validateDeliveryAddress,
@@ -53,7 +54,26 @@ export function CheckoutDialog() {
   const [preview, setPreview] = useState<string | null>(null)
   const [error, setError] = useState("")
   const [submitting, setSubmitting] = useState(false)
+  const [placedOrder, setPlacedOrder] = useState<ShopOrder | null>(null)
+  const [downloadingInvoice, setDownloadingInvoice] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+
+  const resetForm = () => {
+    setPhone("")
+    setAddress("")
+    setPaymentImage(null)
+    setPreview(null)
+    setPhoneError("")
+    setAddressError("")
+    setError("")
+    setPlacedOrder(null)
+    if (fileRef.current) fileRef.current.value = ""
+  }
+
+  const handleClose = () => {
+    resetForm()
+    closeCheckout()
+  }
 
   const handleFile = async (file: File | null) => {
     if (!file) return
@@ -145,7 +165,6 @@ export function CheckoutDialog() {
 
       const order = (await res.json()) as ShopOrder
 
-      // FormSubmit must run in the browser (blocked from Vercel/server).
       try {
         const alertRes = await fetch("/api/order-alerts")
         if (alertRes.ok) {
@@ -158,18 +177,11 @@ export function CheckoutDialog() {
           }
         }
       } catch {
-        /* order saved — don't block WhatsApp redirect */
+        /* order saved */
       }
 
       clearCart()
-      closeCheckout()
-      setPhone("")
-      setAddress("")
-      setPaymentImage(null)
-      setPreview(null)
-
-      const msg = buildWhatsAppOrderMessage({ ...order, freeShippingMinimum })
-      window.location.href = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`
+      setPlacedOrder(order)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong")
     } finally {
@@ -177,166 +189,239 @@ export function CheckoutDialog() {
     }
   }
 
+  const handleDownloadInvoice = async () => {
+    if (!placedOrder) return
+    setDownloadingInvoice(true)
+    setError("")
+    try {
+      await downloadOrderInvoicePdf(placedOrder)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to download invoice")
+    } finally {
+      setDownloadingInvoice(false)
+    }
+  }
+
+  const handleWhatsApp = () => {
+    if (!placedOrder) return
+    const msg = buildWhatsAppOrderMessage({ ...placedOrder, freeShippingMinimum })
+    window.location.href = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`
+  }
+
   return (
-    <Dialog open={checkoutOpen} onOpenChange={(open) => !open && closeCheckout()}>
+    <Dialog open={checkoutOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="font-display text-xl">
-            {isPreOrder ? "Pre-order — Reserve with Advance" : "Checkout — 100% Advance"}
-          </DialogTitle>
-        </DialogHeader>
+        {placedOrder ? (
+          <>
+            <DialogHeader>
+              <DialogTitle className="font-display text-xl flex items-center gap-2">
+                <CheckCircle2 className="w-6 h-6 text-green-600" />
+                Order Placed!
+              </DialogTitle>
+            </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <CheckoutAccessoryUpsell />
-
-          {isPreOrder && (
-            <p className="text-sm text-amber-950 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
-              Pre-order advance is <strong>non-refundable</strong> once paid.
-            </p>
-          )}
-
-          <div className="p-4 rounded-xl bg-secondary border border-primary/15 space-y-2">
-            <div className="flex items-center gap-2 text-primary font-bold text-sm">
-              <CreditCard className="w-4 h-4" />
-              Bank Transfer Details
-            </div>
-            <div className="text-sm space-y-1">
-              <p><span className="text-muted-foreground">Name:</span> <strong>{PAYMENT_DETAILS.accountName}</strong></p>
-              <p><span className="text-muted-foreground">Bank:</span> <strong>{PAYMENT_DETAILS.bank}</strong></p>
-              <p><span className="text-muted-foreground">Account:</span> <strong className="text-primary">{PAYMENT_DETAILS.accountNumber}</strong></p>
-              <p>
-                <span className="text-muted-foreground">Email:</span>{" "}
-                <a href={`mailto:${CONTACT_EMAIL}`} className="text-primary font-medium hover:underline">{CONTACT_EMAIL}</a>
-              </p>
-            </div>
-            <p className="text-xs text-muted-foreground pt-1 border-t border-primary/10">
-              {isPreOrder
-                ? `Transfer PKR ${formatPrice(amountDueNow)} now, then upload your screenshot below.`
-                : `Transfer the full amount (PKR ${formatPrice(total)}) then upload screenshot below.`}
-            </p>
-          </div>
-
-          <div className="p-3 rounded-xl bg-primary text-primary-foreground text-sm font-medium text-center space-y-1">
-            <p className="text-base font-bold">Pay now: PKR {formatPrice(amountDueNow)}</p>
-            {isPreOrder && balanceDue > 0 && (
-              <p className="text-xs opacity-90">
-                Balance PKR {formatPrice(balanceDue)} before dispatch · Order total PKR {formatPrice(total)}
-              </p>
-            )}
-            {freeShipping && (
-              <p className="text-xs opacity-90">Free shipping applied</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1.5">Mobile Number *</label>
-            <Input
-              type="tel"
-              inputMode="tel"
-              autoComplete="tel"
-              value={phone}
-              onChange={(e) => {
-                setPhone(e.target.value)
-                if (phoneError) setPhoneError("")
-              }}
-              onBlur={() => phone.trim() && verifyPhone(phone)}
-              placeholder="0321 1234567"
-              aria-invalid={!!phoneError}
-              required
-            />
-            {phoneError ? (
-              <p className="text-xs text-red-600 mt-1">{phoneError}</p>
-            ) : (
-              <p className="text-xs text-muted-foreground mt-1">
-                Pakistani mobile only — must start with 03 and be 11 digits
-              </p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1.5">Delivery Address *</label>
-            <textarea
-              value={address}
-              onChange={(e) => {
-                setAddress(e.target.value)
-                if (addressError) setAddressError("")
-              }}
-              onBlur={() => address.trim() && verifyAddress(address)}
-              placeholder="House 12, Street 5, DHA Phase 5, Karachi"
-              aria-invalid={!!addressError}
-              required
-              className="w-full min-h-[80px] p-3 bg-input border border-border rounded-lg text-sm resize-y"
-            />
-            {addressError ? (
-              <p className="text-xs text-red-600 mt-1">{addressError}</p>
-            ) : (
-              <p className="text-xs text-muted-foreground mt-1">
-                Include street, area, and city so we can deliver
-              </p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1.5">Payment Screenshot *</label>
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
-            />
-            {preview ? (
-              <div className="relative rounded-xl overflow-hidden border border-primary/20">
-                <img src={preview} alt="Payment proof" className="w-full max-h-48 object-contain bg-secondary" />
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPreview(null)
-                    setPaymentImage(null)
-                    if (fileRef.current) fileRef.current.value = ""
-                  }}
-                  className="absolute top-2 right-2 p-1.5 bg-foreground text-background rounded-full"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+            <div className="space-y-5">
+              <div className="rounded-xl bg-green-50 border border-green-200 p-4 text-sm">
+                <p className="font-bold text-green-900">{placedOrder.orderNumber}</p>
+                <p className="text-green-800 mt-1">
+                  We received your order. Download your invoice below, then continue on WhatsApp so
+                  we can confirm.
+                </p>
               </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => fileRef.current?.click()}
-                className="w-full py-8 border-2 border-dashed border-primary/30 rounded-xl flex flex-col items-center gap-2 hover:bg-secondary transition-colors"
-              >
-                <Upload className="w-8 h-8 text-primary" />
-                <span className="text-sm font-medium">Upload transfer screenshot</span>
-                <span className="text-xs text-muted-foreground">JPG or PNG, max 5MB</span>
-              </button>
-            )}
-          </div>
 
-          {error && (
-            <p className="text-red-600 text-sm text-center bg-red-50 p-3 rounded-lg">{error}</p>
-          )}
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1 h-12 font-bold rounded-xl gap-2"
+                  onClick={() => void handleDownloadInvoice()}
+                  disabled={downloadingInvoice}
+                >
+                  {downloadingInvoice ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4" />
+                  )}
+                  Download Invoice
+                </Button>
+                <Button
+                  type="button"
+                  className="flex-1 h-12 font-bold rounded-xl gap-2"
+                  onClick={handleWhatsApp}
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  Open WhatsApp
+                </Button>
+              </div>
 
-          <Button type="submit" disabled={submitting} className="w-full h-12 font-bold rounded-xl gap-2">
-            {submitting ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Submitting...
-              </>
-            ) : (
-              <>
-                <MessageCircle className="w-4 h-4" />
-                {isPreOrder ? "Submit Pre-order & WhatsApp" : "Submit & Open WhatsApp"}
-              </>
-            )}
-          </Button>
+              {error && (
+                <p className="text-red-600 text-sm text-center bg-red-50 p-3 rounded-lg">{error}</p>
+              )}
 
-          <p className="text-xs text-center text-muted-foreground">
-            {isPreOrder
-              ? "We'll confirm your reservation after reviewing your advance payment."
-              : "Our team will review your payment in the manager portal before dispatching your order."}
-          </p>
-        </form>
+              <Button type="button" variant="ghost" className="w-full" onClick={handleClose}>
+                Close
+              </Button>
+            </div>
+          </>
+        ) : (
+          <>
+            <DialogHeader>
+              <DialogTitle className="font-display text-xl">
+                {isPreOrder ? "Pre-order — Reserve with Advance" : "Checkout — 100% Advance"}
+              </DialogTitle>
+            </DialogHeader>
+
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <CheckoutAccessoryUpsell />
+
+              {isPreOrder && (
+                <p className="text-sm text-amber-950 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+                  Pre-order advance is <strong>non-refundable</strong> once paid.
+                </p>
+              )}
+
+              <div className="p-4 rounded-xl bg-secondary border border-primary/15 space-y-2">
+                <div className="flex items-center gap-2 text-primary font-bold text-sm">
+                  <CreditCard className="w-4 h-4" />
+                  Bank Transfer Details
+                </div>
+                <div className="text-sm space-y-1">
+                  <p><span className="text-muted-foreground">Name:</span> <strong>{PAYMENT_DETAILS.accountName}</strong></p>
+                  <p><span className="text-muted-foreground">Bank:</span> <strong>{PAYMENT_DETAILS.bank}</strong></p>
+                  <p><span className="text-muted-foreground">Account:</span> <strong className="text-primary">{PAYMENT_DETAILS.accountNumber}</strong></p>
+                  <p>
+                    <span className="text-muted-foreground">Email:</span>{" "}
+                    <a href={`mailto:${CONTACT_EMAIL}`} className="text-primary font-medium hover:underline">{CONTACT_EMAIL}</a>
+                  </p>
+                </div>
+                <p className="text-xs text-muted-foreground pt-1 border-t border-primary/10">
+                  {isPreOrder
+                    ? `Transfer PKR ${formatPrice(amountDueNow)} now, then upload your screenshot below.`
+                    : `Transfer the full amount (PKR ${formatPrice(total)}) then upload screenshot below.`}
+                </p>
+              </div>
+
+              <div className="p-3 rounded-xl bg-primary text-primary-foreground text-sm font-medium text-center space-y-1">
+                <p className="text-base font-bold">Pay now: PKR {formatPrice(amountDueNow)}</p>
+                {isPreOrder && balanceDue > 0 && (
+                  <p className="text-xs opacity-90">
+                    Balance PKR {formatPrice(balanceDue)} before dispatch · Order total PKR {formatPrice(total)}
+                  </p>
+                )}
+                {freeShipping && (
+                  <p className="text-xs opacity-90">Free shipping applied</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1.5">Mobile Number *</label>
+                <Input
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  value={phone}
+                  onChange={(e) => {
+                    setPhone(e.target.value)
+                    if (phoneError) setPhoneError("")
+                  }}
+                  onBlur={() => phone.trim() && verifyPhone(phone)}
+                  placeholder="0321 1234567"
+                  aria-invalid={!!phoneError}
+                  required
+                />
+                {phoneError ? (
+                  <p className="text-xs text-red-600 mt-1">{phoneError}</p>
+                ) : (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Pakistani mobile only — must start with 03 and be 11 digits
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1.5">Delivery Address *</label>
+                <textarea
+                  value={address}
+                  onChange={(e) => {
+                    setAddress(e.target.value)
+                    if (addressError) setAddressError("")
+                  }}
+                  onBlur={() => address.trim() && verifyAddress(address)}
+                  placeholder="House 12, Street 5, DHA Phase 5, Karachi"
+                  aria-invalid={!!addressError}
+                  required
+                  className="w-full min-h-[80px] p-3 bg-input border border-border rounded-lg text-sm resize-y"
+                />
+                {addressError ? (
+                  <p className="text-xs text-red-600 mt-1">{addressError}</p>
+                ) : (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Include street, area, and city so we can deliver
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1.5">Payment Screenshot *</label>
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
+                />
+                {preview ? (
+                  <div className="relative rounded-xl overflow-hidden border border-primary/20">
+                    <img src={preview} alt="Payment proof" className="w-full max-h-48 object-contain bg-secondary" />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPreview(null)
+                        setPaymentImage(null)
+                        if (fileRef.current) fileRef.current.value = ""
+                      }}
+                      className="absolute top-2 right-2 p-1.5 bg-foreground text-background rounded-full"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => fileRef.current?.click()}
+                    className="w-full py-8 border-2 border-dashed border-primary/30 rounded-xl flex flex-col items-center gap-2 hover:bg-secondary transition-colors"
+                  >
+                    <Upload className="w-8 h-8 text-primary" />
+                    <span className="text-sm font-medium">Upload transfer screenshot</span>
+                    <span className="text-xs text-muted-foreground">JPG or PNG, max 5MB</span>
+                  </button>
+                )}
+              </div>
+
+              {error && (
+                <p className="text-red-600 text-sm text-center bg-red-50 p-3 rounded-lg">{error}</p>
+              )}
+
+              <Button type="submit" disabled={submitting} className="w-full h-12 font-bold rounded-xl gap-2">
+                {submitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  <>
+                    <MessageCircle className="w-4 h-4" />
+                    {isPreOrder ? "Submit Pre-order" : "Place Order"}
+                  </>
+                )}
+              </Button>
+
+              <p className="text-xs text-center text-muted-foreground">
+                After placing your order you can download an invoice and continue on WhatsApp.
+              </p>
+            </form>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   )

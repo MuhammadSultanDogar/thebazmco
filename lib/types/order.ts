@@ -29,6 +29,8 @@ export interface ShopOrder {
   amountDueNow?: number
   /** Remaining balance before dispatch (pre-orders only) */
   balanceDue?: number
+  /** Secret token for customer invoice download */
+  invoiceToken?: string
 }
 
 export interface CartItem {

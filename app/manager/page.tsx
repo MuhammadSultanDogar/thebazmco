@@ -111,12 +111,12 @@ export default function ManagerPage() {
   // Invoices
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [showInvoiceForm, setShowInvoiceForm] = useState(false)
+  const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null)
   const [viewingInvoice, setViewingInvoice] = useState<Invoice | null>(null)
   const [isCreatingInvoice, setIsCreatingInvoice] = useState(false)
   const invoiceRef = useRef<HTMLDivElement>(null)
 
-  // Invoice form
-  const [invoiceForm, setInvoiceForm] = useState({
+  const getEmptyInvoiceForm = () => ({
     clientName: "",
     clientContact: "",
     eventDate: new Date().toISOString().split("T")[0],
@@ -136,6 +136,9 @@ export default function ManagerPage() {
     paymentMethod: "cash" as "cash" | "transfer",
     paymentStatus: "pending" as "pending" | "paid",
   })
+
+  // Invoice form
+  const [invoiceForm, setInvoiceForm] = useState(getEmptyInvoiceForm())
 
   useEffect(() => {
     fetchRates()
@@ -501,55 +504,87 @@ export default function ManagerPage() {
     return balance.toLocaleString()
   }
 
-  const handleCreateInvoice = async () => {
+  const resetInvoiceForm = () => {
+    setInvoiceForm(getEmptyInvoiceForm())
+    setEditingInvoiceId(null)
+  }
+
+  const openInvoiceFormForEdit = (invoice: Invoice) => {
+    setEditingInvoiceId(invoice.id)
+    setInvoiceForm({
+      clientName: invoice.clientName,
+      clientContact: invoice.clientContact,
+      eventDate: invoice.eventDate.split("T")[0] ?? invoice.eventDate,
+      eventType: invoice.eventType,
+      city: invoice.city,
+      location: invoice.location,
+      startTime: invoice.startTime,
+      endTime: invoice.endTime,
+      numberOfCostumes: invoice.numberOfCostumes,
+      rate: invoice.rate,
+      travelCost: invoice.travelCost || "0",
+      subtotal: invoice.subtotal,
+      advancePaid: invoice.advancePaid || "0",
+      remainingPaid: invoice.remainingPaid || "0",
+      discount: invoice.discount || "0",
+      balance: invoice.balance,
+      paymentMethod: invoice.paymentMethod,
+      paymentStatus: invoice.paymentStatus,
+    })
+    setViewingInvoice(null)
+    setShowInvoiceForm(true)
+  }
+
+  const handleSaveInvoice = async () => {
     setIsCreatingInvoice(true)
     setError("")
+
+    const existing = editingInvoiceId
+      ? invoices.find((inv) => inv.id === editingInvoiceId)
+      : null
 
     const invoiceData = {
       ...invoiceForm,
       balance: calculateBalance(),
-      termsAndConditions: terms,
+      termsAndConditions: existing?.termsAndConditions ?? terms,
+      ...(existing
+        ? {
+            id: existing.id,
+            invoiceNumber: existing.invoiceNumber,
+            createdAt: existing.createdAt,
+          }
+        : {}),
     }
 
     try {
       const res = await fetch("/api/invoices", {
-        method: "POST",
+        method: existing ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(invoiceData),
       })
 
       if (res.ok) {
-        const newInvoice = await res.json()
-        setInvoices([newInvoice, ...invoices])
+        const savedInvoice = await res.json()
+        if (existing) {
+          setInvoices(invoices.map((inv) => (inv.id === savedInvoice.id ? savedInvoice : inv)))
+          setSuccess("Invoice updated successfully!")
+        } else {
+          setInvoices([savedInvoice, ...invoices])
+          setSuccess("Invoice created successfully!")
+        }
         setShowInvoiceForm(false)
-        setInvoiceForm({
-          clientName: "",
-          clientContact: "",
-          eventDate: new Date().toISOString().split("T")[0],
-          eventType: "",
-          city: "",
-          location: "",
-          startTime: "",
-          endTime: "",
-          numberOfCostumes: 1,
-          rate: "",
-          travelCost: "0",
-          subtotal: "",
-          advancePaid: "0",
-          remainingPaid: "0",
-          discount: "0",
-          balance: "",
-          paymentMethod: "cash",
-          paymentStatus: "pending",
-        })
-        setSuccess("Invoice created successfully!")
+        resetInvoiceForm()
         setTimeout(() => setSuccess(""), 3000)
       } else {
         const errorData = await res.json()
-        setError(`Failed to create invoice: ${errorData.error || res.statusText} (Status: ${res.status})`)
+        setError(
+          `Failed to ${existing ? "update" : "create"} invoice: ${errorData.error || res.statusText} (Status: ${res.status})`,
+        )
       }
     } catch (err) {
-      setError(`Failed to create invoice: ${err instanceof Error ? err.message : "Unknown error"}`)
+      setError(
+        `Failed to ${existing ? "update" : "create"} invoice: ${err instanceof Error ? err.message : "Unknown error"}`,
+      )
     } finally {
       setIsCreatingInvoice(false)
     }
@@ -739,6 +774,10 @@ export default function ManagerPage() {
               Close
             </Button>
             <div className="flex gap-2">
+              <Button variant="outline" onClick={() => openInvoiceFormForEdit(viewingInvoice)}>
+                <Pencil className="w-4 h-4 mr-2" />
+                Edit Invoice
+              </Button>
               {viewingInvoice.paymentStatus === "pending" ? (
                 <Button
                   variant="outline"
@@ -1477,7 +1516,12 @@ export default function ManagerPage() {
           <div className="space-y-6">
             {!showInvoiceForm ? (
               <>
-                <Button onClick={() => setShowInvoiceForm(true)}>
+                <Button
+                  onClick={() => {
+                    resetInvoiceForm()
+                    setShowInvoiceForm(true)
+                  }}
+                >
                   <Plus className="w-4 h-4 mr-2" />
                   Create New Invoice
                 </Button>
@@ -1521,6 +1565,13 @@ export default function ManagerPage() {
                               <Button
                                 size="sm"
                                 variant="outline"
+                                onClick={() => openInvoiceFormForEdit(invoice)}
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
                                 onClick={() => setViewingInvoice(invoice)}
                               >
                                 <Eye className="w-4 h-4" />
@@ -1545,8 +1596,23 @@ export default function ManagerPage() {
               /* Invoice Form */
               <div className="bg-card rounded-2xl p-8 border border-border space-y-6">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-semibold">Create New Invoice</h2>
-                  <Button variant="ghost" onClick={() => setShowInvoiceForm(false)}>
+                  <div>
+                    <h2 className="text-xl font-semibold">
+                      {editingInvoiceId ? "Edit Invoice" : "Create New Invoice"}
+                    </h2>
+                    {editingInvoiceId && (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {invoices.find((inv) => inv.id === editingInvoiceId)?.invoiceNumber}
+                      </p>
+                    )}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setShowInvoiceForm(false)
+                      resetInvoiceForm()
+                    }}
+                  >
                     <X className="w-4 h-4" />
                   </Button>
                 </div>
@@ -1815,19 +1881,19 @@ export default function ManagerPage() {
                 </div>
 
                 <Button
-                  onClick={handleCreateInvoice}
+                  onClick={handleSaveInvoice}
                   className="w-full"
                   disabled={isCreatingInvoice}
                 >
                   {isCreatingInvoice ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Creating...
+                      {editingInvoiceId ? "Saving..." : "Creating..."}
                     </>
                   ) : (
                     <>
                       <FileText className="w-4 h-4 mr-2" />
-                      Create Invoice
+                      {editingInvoiceId ? "Save Changes" : "Create Invoice"}
                     </>
                   )}
                 </Button>
