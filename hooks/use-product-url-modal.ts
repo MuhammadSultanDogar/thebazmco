@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { usePathname } from "next/navigation"
 import type { MascotProduct } from "@/lib/types/mascot"
-import { parseProductPath } from "@/lib/utils/product-slug"
+import { findProductBySlug, parseProductPath } from "@/lib/utils/product-slug"
 import {
   closeProductUrl,
   pushProductUrl,
@@ -11,40 +11,103 @@ import {
   syncProductFromBrowserUrl,
 } from "@/lib/utils/product-url-sync"
 
+function mergeFreshProduct(
+  current: MascotProduct | null,
+  next: MascotProduct | null,
+): MascotProduct | null {
+  if (!next) return null
+  if (!current || current.id !== next.id) return next
+
+  const currentImages = current.images?.length ?? (current.image ? 1 : 0)
+  const nextImages = next.images?.length ?? (next.image ? 1 : 0)
+
+  if (
+    current.image !== next.image ||
+    currentImages !== nextImages ||
+    current.price !== next.price ||
+    current.name !== next.name ||
+    current.description !== next.description ||
+    current.soldOut !== next.soldOut ||
+    current.preOrder !== next.preOrder
+  ) {
+    return next
+  }
+
+  return current
+}
+
 /**
  * Opens/closes the product modal while syncing the shareable URL via
  * history.pushState — avoids Next.js route navigation and page remounts.
  */
-export function useProductUrlModal(products: MascotProduct[]) {
+export function useProductUrlModal(
+  products: MascotProduct[],
+  initialOpenProduct?: MascotProduct | null,
+) {
   const pathname = usePathname()
-  const [detailProduct, setDetailProduct] = useState<MascotProduct | null>(null)
+  const [detailProduct, setDetailProduct] = useState<MascotProduct | null>(
+    initialOpenProduct ?? null,
+  )
   const clientNavRef = useRef(false)
-  const initializedRef = useRef(false)
+  const didScrollForDirectLink = useRef(false)
 
-  // Direct visit to /mascots/slug or /accessories/slug (full page load)
+  const openFromUrl = useCallback(
+    (shouldScroll: boolean) => {
+      const product = syncProductFromBrowserUrl(products)
+      if (!product) return false
+
+      setDetailProduct((current) => mergeFreshProduct(current, product))
+
+      if (shouldScroll && !didScrollForDirectLink.current) {
+        didScrollForDirectLink.current = true
+        scrollToShop()
+      }
+
+      return true
+    },
+    [products],
+  )
+
+  // Keep trying until catalog has loaded (fixes new manager products + direct links)
   useEffect(() => {
-    if (!products.length || initializedRef.current) return
+    const parsed =
+      parseProductPath(pathname) ?? parseProductPath(window.location.pathname)
+    if (!parsed) return
 
-    const fromNextPath = parseProductPath(pathname)
-    const fromBrowserPath = parseProductPath(window.location.pathname)
-    if (!fromNextPath && !fromBrowserPath) {
-      initializedRef.current = true
-      return
-    }
+    openFromUrl(true)
+  }, [pathname, products, openFromUrl])
 
-    initializedRef.current = true
-    const product = syncProductFromBrowserUrl(products)
-    if (product) {
-      setDetailProduct(product)
+  // Refresh open modal when catalog updates (images, prices, etc.)
+  useEffect(() => {
+    setDetailProduct((current) => {
+      if (!current) return current
+      const fresh = products.find((p) => p.id === current.id)
+      if (!fresh) return current
+      return mergeFreshProduct(current, fresh)
+    })
+  }, [products])
+
+  // Server provided product on /mascots/slug pages
+  useEffect(() => {
+    if (!initialOpenProduct) return
+    setDetailProduct(initialOpenProduct)
+    if (!didScrollForDirectLink.current) {
+      didScrollForDirectLink.current = true
       scrollToShop()
     }
-  }, [products, pathname])
+  }, [initialOpenProduct])
 
-  // Browser back / forward
   useEffect(() => {
     const onPopState = () => {
-      const product = syncProductFromBrowserUrl(products)
-      setDetailProduct(product)
+      const parsed = parseProductPath(window.location.pathname)
+      if (!parsed) {
+        setDetailProduct(null)
+        clientNavRef.current = false
+        return
+      }
+
+      const product = findProductBySlug(products, parsed.category, parsed.slug)
+      setDetailProduct(product ?? null)
       clientNavRef.current = product !== null
     }
 

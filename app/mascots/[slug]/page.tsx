@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation"
 import { HomePage } from "@/components/landing/home-page"
 import { buildProductMetadata } from "@/lib/seo/product-metadata"
-import { loadSiteData } from "@/lib/store"
+import { getPublicMascots } from "@/lib/store/public-mascots"
 import { findProductBySlug } from "@/lib/utils/product-slug"
 
 type PageProps = {
@@ -15,14 +15,12 @@ export async function generateMetadata({ params }: PageProps) {
 
 export default async function MascotProductPage({ params }: PageProps) {
   const { slug } = await params
+  const initialProducts = await getPublicMascots()
+  const product = findProductBySlug(initialProducts, "mascots", slug)
 
-  try {
-    const data = await loadSiteData()
-    const product = findProductBySlug(data.mascots, "mascots", slug)
-    if (!product) notFound()
-  } catch {
-    notFound()
-  }
+  if (!product) notFound()
 
-  return <HomePage />
+  return (
+    <HomePage initialProducts={initialProducts} initialOpenProduct={product} />
+  )
 }

@@ -93,7 +93,7 @@ export function ProductDetailModal({
             {hasImages ? (
               <>
                 <SmartProductImage
-                  key={images[safeIndex]}
+                  key={`${product.id}-${images[safeIndex]}`}
                   src={images[safeIndex]}
                   alt={`${product.name} photo ${safeIndex + 1}`}
                   sizes="(max-width: 768px) 100vw, 768px"

@@ -195,17 +195,27 @@ function ProductGrid({
   )
 }
 
-export function MascotsShop() {
+export function MascotsShop({
+  initialProducts,
+  initialOpenProduct,
+}: {
+  initialProducts?: MascotProduct[]
+  initialOpenProduct?: MascotProduct | null
+} = {}) {
   const { addItem } = useCart()
   const { preOrder, freeShippingMinimum } = useShopSettings()
 
   const { data: products } = useSWR<MascotProduct[]>("/api/mascots", fetcher, {
-    fallbackData: DEFAULT_PRODUCTS,
-    revalidateOnFocus: false,
+    fallbackData: initialProducts?.length ? initialProducts : DEFAULT_PRODUCTS,
+    revalidateOnFocus: true,
+    dedupingInterval: 30_000,
   })
 
-  const list = products ?? DEFAULT_PRODUCTS
-  const { detailProduct, openProduct, closeProduct } = useProductUrlModal(list)
+  const list = products ?? initialProducts ?? DEFAULT_PRODUCTS
+  const { detailProduct, openProduct, closeProduct } = useProductUrlModal(
+    list,
+    initialOpenProduct,
+  )
   const mascots = list.filter((p) => (p.category || "mascot") === "mascot")
   const accessories = list.filter((p) => p.category === "accessory")
   const hasPreOrderItems = hasPreOrderProducts(list, preOrder)

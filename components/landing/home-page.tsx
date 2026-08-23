@@ -8,8 +8,14 @@ import { CTA } from "@/components/landing/cta"
 import { Footer } from "@/components/landing/footer"
 import { MascotBackground } from "@/components/landing/mascot-background"
 import { HomeJsonLd } from "@/components/seo/home-json-ld"
+import type { MascotProduct } from "@/lib/types/mascot"
 
-export function HomePage() {
+type HomePageProps = {
+  initialProducts?: MascotProduct[]
+  initialOpenProduct?: MascotProduct | null
+}
+
+export function HomePage({ initialProducts, initialOpenProduct }: HomePageProps) {
   return (
     <main className="relative min-h-screen">
       <MascotBackground />
@@ -17,7 +23,10 @@ export function HomePage() {
         <HomeJsonLd />
         <Header />
         <Hero />
-        <MascotsShop />
+        <MascotsShop
+          initialProducts={initialProducts}
+          initialOpenProduct={initialOpenProduct}
+        />
         <StatsStrip />
         <PerformanceSection />
         <FAQ />
