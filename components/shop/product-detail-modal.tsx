@@ -1,12 +1,14 @@
 "use client"
 
 import { useState } from "react"
-import { ChevronLeft, ChevronRight, ShoppingCart, Sparkles, X, CalendarClock } from "lucide-react"
+import { ChevronLeft, ChevronRight, ShoppingCart, Sparkles, X, CalendarClock, Link2, Check } from "lucide-react"
 import type { MascotProduct } from "@/lib/types/mascot"
 import { getProductEmoji } from "@/lib/constants/products"
 import { getProductImages } from "@/lib/utils/product-images"
 import { isProductSoldOut } from "@/lib/utils/product-availability"
 import { isProductPreOrder } from "@/lib/utils/pre-order"
+import { getProductAbsoluteUrl } from "@/lib/utils/product-slug"
+import { SITE_URL } from "@/lib/seo/site"
 import { SmartProductImage } from "@/components/shop/smart-product-image"
 import { ProductPrice } from "@/components/shop/product-price"
 import { useShopSettings } from "@/hooks/use-shop-settings"
@@ -31,6 +33,7 @@ export function ProductDetailModal({
   onAddToCart,
 }: ProductDetailModalProps) {
   const [activeIndex, setActiveIndex] = useState(0)
+  const [linkCopied, setLinkCopied] = useState(false)
   const { preOrder } = useShopSettings()
   const soldOut = product ? isProductSoldOut(product) : false
   const productPreOrder = product ? isProductPreOrder(product, preOrder) : false
@@ -50,6 +53,17 @@ export function ProductDetailModal({
   const goNext = () => {
     if (!hasImages) return
     setActiveIndex((i) => (i === images.length - 1 ? 0 : i + 1))
+  }
+
+  const handleCopyLink = async () => {
+    const url = getProductAbsoluteUrl(product, SITE_URL)
+    try {
+      await navigator.clipboard.writeText(url)
+      setLinkCopied(true)
+      window.setTimeout(() => setLinkCopied(false), 2000)
+    } catch {
+      window.prompt("Copy this link:", url)
+    }
   }
 
   return (
@@ -174,11 +188,32 @@ export function ProductDetailModal({
         </div>
 
         <div className="p-5 sm:p-6 space-y-4">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-primary mb-1">
-              {product.category === "accessory" ? "Accessory" : "Inflatable Mascot"}
-            </p>
-            <h2 className="font-display text-2xl sm:text-3xl font-bold leading-tight">{product.name}</h2>
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs font-bold uppercase tracking-wider text-primary mb-1">
+                {product.category === "accessory" ? "Accessory" : "Inflatable Mascot"}
+              </p>
+              <h2 className="font-display text-2xl sm:text-3xl font-bold leading-tight">{product.name}</h2>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="shrink-0 gap-1.5 rounded-xl"
+              onClick={() => void handleCopyLink()}
+            >
+              {linkCopied ? (
+                <>
+                  <Check className="w-4 h-4 text-green-600" />
+                  Copied
+                </>
+              ) : (
+                <>
+                  <Link2 className="w-4 h-4" />
+                  Copy link
+                </>
+              )}
+            </Button>
           </div>
 
           <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
