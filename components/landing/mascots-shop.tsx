@@ -1,7 +1,5 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
-import { usePathname, useRouter } from "next/navigation"
 import { ShoppingCart, Sparkles, Zap, Truck, CreditCard, CalendarClock } from "lucide-react"
 import useSWR from "swr"
 import type { MascotProduct } from "@/lib/types/mascot"
@@ -11,11 +9,7 @@ import { CONTACT_EMAIL } from "@/lib/constants/contact"
 import { getProductImages, getProductPrimaryImage } from "@/lib/utils/product-images"
 import { isProductSoldOut } from "@/lib/utils/product-availability"
 import { isProductPreOrder, hasPreOrderProducts } from "@/lib/utils/pre-order"
-import {
-  findProductBySlug,
-  getProductPath,
-  parseProductPath,
-} from "@/lib/utils/product-slug"
+import { useProductUrlModal } from "@/hooks/use-product-url-modal"
 import { SmartProductImage } from "@/components/shop/smart-product-image"
 import { ScrollReveal } from "@/components/landing/scroll-reveal"
 import { ProductDetailModal } from "@/components/shop/product-detail-modal"
@@ -202,11 +196,8 @@ function ProductGrid({
 }
 
 export function MascotsShop() {
-  const [detailProduct, setDetailProduct] = useState<MascotProduct | null>(null)
   const { addItem } = useCart()
   const { preOrder, freeShippingMinimum } = useShopSettings()
-  const router = useRouter()
-  const pathname = usePathname()
 
   const { data: products } = useSWR<MascotProduct[]>("/api/mascots", fetcher, {
     fallbackData: DEFAULT_PRODUCTS,
@@ -214,43 +205,10 @@ export function MascotsShop() {
   })
 
   const list = products ?? DEFAULT_PRODUCTS
+  const { detailProduct, openProduct, closeProduct } = useProductUrlModal(list)
   const mascots = list.filter((p) => (p.category || "mascot") === "mascot")
   const accessories = list.filter((p) => p.category === "accessory")
   const hasPreOrderItems = hasPreOrderProducts(list, preOrder)
-
-  const openProduct = useCallback(
-    (product: MascotProduct) => {
-      setDetailProduct(product)
-      const path = getProductPath(product)
-      if (pathname !== path) {
-        router.push(path, { scroll: false })
-      }
-    },
-    [pathname, router],
-  )
-
-  const closeProduct = useCallback(() => {
-    setDetailProduct(null)
-    if (pathname !== "/") {
-      router.push("/", { scroll: false })
-    }
-  }, [pathname, router])
-
-  useEffect(() => {
-    if (!list.length) return
-
-    const parsed = parseProductPath(pathname)
-    if (!parsed) return
-
-    const product = findProductBySlug(list, parsed.category, parsed.slug)
-    setDetailProduct(product ?? null)
-
-    if (product) {
-      requestAnimationFrame(() => {
-        document.getElementById("mascots")?.scrollIntoView({ behavior: "auto", block: "start" })
-      })
-    }
-  }, [pathname, list])
 
   return (
     <>
