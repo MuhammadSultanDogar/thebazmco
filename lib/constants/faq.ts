@@ -12,7 +12,7 @@ export const FAQ_ITEMS = [
   {
     question: "Do you deliver mascots nationwide?",
     answer:
-      "Yes. TheBazm delivers inflatable mascots and accessories across Pakistan. Each product has a per-unit shipping charge. Free shipping applies when your order subtotal meets the minimum shown on the shop.",
+      "Yes. TheBazm delivers inflatable mascots and accessories across Pakistan. Mascot orders ship free. Accessories-only orders include per-unit shipping on each item.",
   },
   {
     question: "How do I order a mascot from TheBazm?",

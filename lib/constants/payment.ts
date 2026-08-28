@@ -45,7 +45,7 @@ export function buildWhatsAppOrderMessage(order: {
     "",
     `Subtotal: PKR ${formatPrice(order.subtotal)}`,
     order.freeShipping
-      ? `Shipping: FREE (order at or above PKR ${formatPrice(order.freeShippingMinimum ?? 10000)})`
+      ? "Shipping: FREE (mascot order)"
       : `Shipping: PKR ${formatPrice(order.shipping)}`,
     `Order total: PKR ${formatPrice(order.total)}`,
     "",

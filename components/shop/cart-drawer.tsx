@@ -6,6 +6,7 @@ import { useCart } from "@/hooks/use-cart"
 import { getProductPrimaryImage } from "@/lib/utils/product-images"
 import { getProductEmoji } from "@/lib/constants/products"
 import { formatPrice } from "@/lib/constants/payment"
+import { cartHasMascot } from "@/lib/utils/order-totals"
 import { useShopSettings } from "@/hooks/use-shop-settings"
 import { isProductPreOrder } from "@/lib/utils/pre-order"
 import {
@@ -24,7 +25,6 @@ export function CartDrawer() {
     shipping,
     total,
     freeShipping,
-    amountToFreeShipping,
     isPreOrder,
     amountDueNow,
     balanceDue,
@@ -34,7 +34,8 @@ export function CartDrawer() {
     removeItem,
     updateQuantity,
   } = useCart()
-  const { preOrder, freeShippingMinimum } = useShopSettings()
+  const { preOrder } = useShopSettings()
+  const hasMascotInCart = cartHasMascot(items)
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && closeCart()}>
@@ -121,16 +122,16 @@ export function CartDrawer() {
               <div className="p-3 rounded-xl bg-primary/5 border border-primary/15 text-sm">
                 <div className="flex items-center gap-2 text-primary font-semibold mb-1">
                   <Truck className="w-4 h-4" />
-                  {freeShipping ? (
-                    <span>Free shipping applied!</span>
+                  {hasMascotInCart ? (
+                    <span>Free shipping — mascot in your order</span>
                   ) : (
-                    <span>
-                      Add PKR {formatPrice(amountToFreeShipping)} more for free shipping
-                    </span>
+                    <span>Accessory shipping applies per unit</span>
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Free delivery on orders above PKR {formatPrice(freeShippingMinimum)}
+                  {hasMascotInCart
+                    ? "Mascot orders ship free across Pakistan."
+                    : "Accessories-only orders include shipping on each item."}
                 </p>
               </div>
             </div>

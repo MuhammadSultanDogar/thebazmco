@@ -19,9 +19,11 @@ import {
   Pencil,
   Package,
   Database,
+  ScrollText,
 } from "lucide-react"
 import { InvoiceTemplate } from "@/components/invoice-template"
 import { ShopOrdersTab } from "@/components/manager/shop-orders-tab"
+import { ParkViewProposalTab } from "@/components/manager/park-view-proposal-tab"
 import { OrderAlertPoller } from "@/components/manager/order-alert-poller"
 import { ProductImagesInput } from "@/components/manager/product-images-input"
 import { normalizeMascotProduct } from "@/lib/utils/product-images"
@@ -92,7 +94,7 @@ export default function ManagerPage() {
   const [isSavingTerms, setIsSavingTerms] = useState(false)
 
   // Tabs
-  const [activeTab, setActiveTab] = useState<"rates" | "invoices" | "terms" | "mascots" | "orders" | "storage">("rates")
+  const [activeTab, setActiveTab] = useState<"rates" | "invoices" | "terms" | "mascots" | "orders" | "storage" | "proposal">("rates")
   const [pendingOrderCount, setPendingOrderCount] = useState(0)
 
   // Mascots
@@ -889,6 +891,13 @@ export default function ManagerPage() {
             Terms & Conditions
           </Button>
           <Button
+            variant={activeTab === "proposal" ? "default" : "outline"}
+            onClick={() => setActiveTab("proposal")}
+          >
+            <ScrollText className="w-4 h-4 mr-2" />
+            Park View Proposal
+          </Button>
+          <Button
             variant={activeTab === "storage" ? "default" : "outline"}
             onClick={() => setActiveTab("storage")}
           >
@@ -1004,6 +1013,8 @@ export default function ManagerPage() {
 
         {activeTab === "storage" && <StorageTab />}
 
+        {activeTab === "proposal" && <ParkViewProposalTab />}
+
         {/* Mascots Tab */}
         {activeTab === "mascots" && (
           <div className="space-y-6">
@@ -1013,26 +1024,17 @@ export default function ManagerPage() {
                   <div className="rounded-xl p-4 border-2 border-primary/20 bg-primary/5">
                     <h2 className="font-semibold mb-1">Shipping</h2>
                     <p className="text-sm text-muted-foreground mb-4 max-w-xl">
-                      Each product has its own shipping charge (per unit). Below that subtotal, shipping
-                      is added per item × quantity. At or above the minimum, shipping is free.
+                      Mascot orders ship <strong>free</strong>. Accessories-only orders always
+                      include each item&apos;s shipping charge × quantity. Mixed carts with a
+                      mascot also ship free.
                     </p>
                     <div className="max-w-xs">
                       <label className="block text-sm font-medium mb-2">
-                        Free shipping minimum (PKR subtotal)
+                        Accessory shipping (set per product below)
                       </label>
-                      <Input
-                        type="number"
-                        min={0}
-                        value={shippingSettings.freeShippingMinimum}
-                        onChange={(e) =>
-                          setShippingSettings({
-                            ...shippingSettings,
-                            freeShippingMinimum: Number(e.target.value) || 0,
-                          })
-                        }
-                      />
-                      <p className="text-xs text-muted-foreground mt-2">
-                        Default is PKR 10,000. Set to 0 to always charge shipping.
+                      <p className="text-xs text-muted-foreground">
+                        Edit each accessory&apos;s &quot;Shipping per unit&quot; in the product
+                        form. Mascot shipping fields are ignored at checkout.
                       </p>
                     </div>
                   </div>

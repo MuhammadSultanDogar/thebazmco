@@ -203,7 +203,7 @@ export function MascotsShop({
   initialOpenProduct?: MascotProduct | null
 } = {}) {
   const { addItem } = useCart()
-  const { preOrder, freeShippingMinimum } = useShopSettings()
+  const { preOrder } = useShopSettings()
 
   const { data: products } = useSWR<MascotProduct[]>("/api/mascots", fetcher, {
     fallbackData: initialProducts?.length ? initialProducts : DEFAULT_PRODUCTS,
@@ -240,8 +240,7 @@ export function MascotsShop({
                 <div className="flex items-center gap-2 px-4 py-3 bg-white rounded-xl border border-primary/15 text-sm">
                   <Truck className="w-4 h-4 text-primary shrink-0" />
                   <span>
-                    Free shipping on orders{" "}
-                    <strong>above PKR {formatPrice(freeShippingMinimum)}</strong>
+                    <strong>Free shipping</strong> on mascot orders · accessory shipping per unit
                   </span>
                 </div>
                 <div className="flex items-center gap-2 px-4 py-3 bg-primary/10 text-primary border border-primary/20 rounded-xl text-sm font-medium">

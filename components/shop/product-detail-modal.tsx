@@ -226,10 +226,13 @@ export function ProductDetailModal({
                 {productPreOrder && !soldOut ? "Pre-order price" : "Price"}
               </p>
               <ProductPrice product={product} size="lg" />
-              {product.shipping && product.shipping !== "0" && (
+              {product.category === "accessory" && product.shipping && product.shipping !== "0" && (
                 <p className="text-xs text-muted-foreground mt-1">
                   + PKR {product.shipping} shipping per unit
                 </p>
+              )}
+              {product.category !== "accessory" && (
+                <p className="text-xs text-primary font-medium mt-1">Free nationwide shipping</p>
               )}
               {productPreOrder && !soldOut && (
                 <p className="text-xs text-muted-foreground mt-2">

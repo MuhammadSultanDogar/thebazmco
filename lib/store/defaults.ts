@@ -6,6 +6,7 @@ import type { SiteData } from "@/lib/types/site-data"
 import type { PreOrderSettings } from "@/lib/types/pre-order"
 import type { ShippingSettings } from "@/lib/types/shipping-settings"
 import { normalizeMascotList } from "@/lib/utils/product-images"
+import { normalizeParkViewProposal } from "@/lib/constants/park-view-proposal"
 
 export const DEFAULT_TERMS = `A 50% advance payment is required to confirm the booking.
 The remaining amount must be cleared before the start of the event.
@@ -34,6 +35,7 @@ export function createDefaultSiteData(): SiteData {
     orderNotifications: { ...DEFAULT_ORDER_NOTIFICATIONS },
     orders: [],
     invoices: [],
+    parkViewProposal: normalizeParkViewProposal(undefined),
     orderCounter: 1,
     invoiceCounter: 1,
     updatedAt: new Date().toISOString(),
@@ -83,6 +85,7 @@ export function normalizeSiteData(raw: Partial<SiteData> | null | undefined): Si
     orderNotifications: normalizeOrderNotifications(raw.orderNotifications),
     orders: Array.isArray(raw.orders) ? raw.orders : defaults.orders,
     invoices: Array.isArray(raw.invoices) ? raw.invoices : defaults.invoices,
+    parkViewProposal: normalizeParkViewProposal(raw.parkViewProposal),
     orderCounter: raw.orderCounter ?? defaults.orderCounter,
     invoiceCounter: raw.invoiceCounter ?? defaults.invoiceCounter,
     updatedAt: raw.updatedAt ?? defaults.updatedAt,

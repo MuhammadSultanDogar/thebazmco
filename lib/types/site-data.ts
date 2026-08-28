@@ -4,6 +4,7 @@ import type { OrderNotificationSettings } from "@/lib/types/order-notifications"
 import type { ShippingSettings } from "@/lib/types/shipping-settings"
 import type { ShopOrder } from "@/lib/types/order"
 import type { Invoice } from "@/lib/types/invoice"
+import type { ParkViewProposal } from "@/lib/types/park-view-proposal"
 
 export type PerformanceRates = {
   "30min": string
@@ -20,6 +21,7 @@ export type SiteData = {
   orderNotifications: OrderNotificationSettings
   orders: ShopOrder[]
   invoices: Invoice[]
+  parkViewProposal?: ParkViewProposal
   orderCounter: number
   invoiceCounter: number
   updatedAt: string
