@@ -16,7 +16,7 @@ async function fetchReelMeta(url: string): Promise<OEmbedResponse | null> {
     const oembedUrl = `https://www.instagram.com/api/v1/oembed/?url=${encodeURIComponent(url)}`
     const res = await fetch(oembedUrl, {
       headers: { "User-Agent": "Mozilla/5.0 (compatible; TheBazm/1.0)" },
-      cache: "no-store",
+      next: { revalidate: 86400 },
     })
     if (!res.ok) return null
     return res.json()
@@ -48,5 +48,7 @@ export async function GET(request: Request) {
     }),
   )
 
-  return NextResponse.json(reels)
+  return NextResponse.json(reels, {
+    headers: { "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=604800" },
+  })
 }

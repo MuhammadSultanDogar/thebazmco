@@ -30,12 +30,16 @@ function notifyNewOrder(order: ShopOrder) {
 export function OrderAlertPoller({
   onNewOrder,
   onPendingCount,
-  pollMs = 45_000,
+  pollMs = 120_000,
 }: OrderAlertPollerProps) {
   const knownIds = useRef<Set<string>>(new Set())
   const ready = useRef(false)
 
   const poll = useCallback(async () => {
+    if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+      return
+    }
+
     try {
       const res = await fetch("/api/orders", { cache: "no-store" })
       if (!res.ok) return
@@ -66,8 +70,21 @@ export function OrderAlertPoller({
 
   useEffect(() => {
     void poll()
+
     const timer = setInterval(() => void poll(), pollMs)
-    return () => clearInterval(timer)
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void poll()
+      }
+    }
+
+    document.addEventListener("visibilitychange", onVisibilityChange)
+
+    return () => {
+      clearInterval(timer)
+      document.removeEventListener("visibilitychange", onVisibilityChange)
+    }
   }, [poll, pollMs])
 
   return null

@@ -207,8 +207,8 @@ export function MascotsShop({
 
   const { data: products } = useSWR<MascotProduct[]>("/api/mascots", fetcher, {
     fallbackData: initialProducts?.length ? initialProducts : DEFAULT_PRODUCTS,
-    revalidateOnFocus: true,
-    dedupingInterval: 30_000,
+    revalidateOnFocus: false,
+    dedupingInterval: 300_000,
   })
 
   const list = products ?? initialProducts ?? DEFAULT_PRODUCTS

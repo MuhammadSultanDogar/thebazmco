@@ -19,7 +19,7 @@ export async function GET() {
   const shippingSettings = config.shippingSettings ?? DEFAULT_SHIPPING_SETTINGS
 
   return NextResponse.json({ preOrder, shippingSettings }, {
-    headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120" },
+    headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600" },
   })
 }
 

@@ -40,7 +40,8 @@ export function ShopSettingsProvider({
       preOrder: initialPreOrder,
       shippingSettings: initialShippingSettings,
     },
-    revalidateOnFocus: true,
+    revalidateOnFocus: false,
+    dedupingInterval: 300_000,
     keepPreviousData: true,
   })
 
