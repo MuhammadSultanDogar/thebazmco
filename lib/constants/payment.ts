@@ -1,7 +1,7 @@
 export const PAYMENT_DETAILS = {
-  accountName: "Muhammad Hasaan Dogar",
+  accountName: "Muhammad Sultan Dogar",
   bank: "UBL (United Bank Limited)",
-  accountNumber: "0711367881131",
+  accountNumber: "0711342177246",
   note: "100% advance payment required before dispatch. Upload your transfer screenshot at checkout.",
 }
 
