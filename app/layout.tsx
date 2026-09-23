@@ -6,7 +6,15 @@ import { SpatiolensCredit } from '@/components/landing/spatiolens-credit'
 import { loadSiteConfig } from '@/lib/store'
 import { DEFAULT_PRE_ORDER } from '@/lib/types/pre-order'
 import { DEFAULT_SHIPPING_SETTINGS } from '@/lib/types/shipping-settings'
-import { SEO_KEYWORDS, SITE_DESCRIPTION, SITE_NAME, SITE_URL } from '@/lib/seo/site'
+import {
+  OG_IMAGE_ALT,
+  OG_IMAGE_PATH,
+  SEO_KEYWORDS,
+  SITE_DESCRIPTION,
+  SITE_ICON_PATH,
+  SITE_NAME,
+  SITE_URL,
+} from '@/lib/seo/site'
 import './globals.css'
 
 const jakarta = Plus_Jakarta_Sans({
@@ -45,11 +53,20 @@ export const metadata: Metadata = {
     locale: 'en_PK',
     siteName: SITE_NAME,
     url: SITE_URL,
+    images: [
+      {
+        url: OG_IMAGE_PATH,
+        width: 575,
+        height: 1024,
+        alt: OG_IMAGE_ALT,
+      },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
     title: `${SITE_NAME} | Inflatable Mascot Shop`,
     description: SITE_DESCRIPTION,
+    images: [OG_IMAGE_PATH],
   },
   keywords: SEO_KEYWORDS,
   robots: {
@@ -65,8 +82,9 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       { url: '/favicon.ico', sizes: 'any' },
+      { url: '/favicon-16.png', sizes: '16x16', type: 'image/png' },
       { url: '/favicon-32.png', sizes: '32x32', type: 'image/png' },
-      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: SITE_ICON_PATH, sizes: '192x192', type: 'image/png' },
     ],
     apple: '/apple-touch-icon.png',
   },

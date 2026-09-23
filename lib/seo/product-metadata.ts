@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import { loadSiteData } from "@/lib/store"
-import { SITE_NAME, SITE_URL } from "@/lib/seo/site"
+import { OG_IMAGE_PATH, SITE_NAME, SITE_URL } from "@/lib/seo/site"
 import {
   findProductBySlug,
   getProductAbsoluteUrl,
@@ -35,12 +35,13 @@ export async function buildProductMetadata(
         url,
         type: "website",
         siteName: SITE_NAME,
-        ...(product.image ? { images: [{ url: product.image }] } : {}),
+        images: [{ url: product.image || OG_IMAGE_PATH }],
       },
       twitter: {
         card: "summary_large_image",
         title,
         description,
+        images: [product.image || OG_IMAGE_PATH],
       },
     }
   } catch {

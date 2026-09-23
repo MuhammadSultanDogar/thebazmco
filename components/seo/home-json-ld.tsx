@@ -1,6 +1,12 @@
 import { FAQ_ITEMS } from "@/lib/constants/faq"
 import { CONTACT_EMAIL, WHATSAPP_DISPLAY } from "@/lib/constants/contact"
-import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/seo/site"
+import {
+  OG_IMAGE_URL,
+  SITE_DESCRIPTION,
+  SITE_ICON_URL,
+  SITE_NAME,
+  SITE_URL,
+} from "@/lib/seo/site"
 import { loadSiteData } from "@/lib/store"
 import { getProductImages } from "@/lib/utils/product-images"
 
@@ -14,7 +20,7 @@ export async function HomeJsonLd() {
     name: SITE_NAME,
     alternateName: "TheBazm Mascot Shop",
     url: SITE_URL,
-    logo: `${SITE_URL}/icon-192.png`,
+    logo: SITE_ICON_URL,
     description: SITE_DESCRIPTION,
     email: CONTACT_EMAIL,
     telephone: WHATSAPP_DISPLAY,
@@ -37,7 +43,7 @@ export async function HomeJsonLd() {
     name: `${SITE_NAME} — Inflatable Mascot Shop`,
     url: SITE_URL,
     description: SITE_DESCRIPTION,
-    image: `${SITE_URL}/icon-192.png`,
+    image: OG_IMAGE_URL,
     telephone: WHATSAPP_DISPLAY,
     email: CONTACT_EMAIL,
     priceRange: "PKR",
