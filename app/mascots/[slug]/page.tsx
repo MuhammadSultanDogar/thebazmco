@@ -4,6 +4,8 @@ import { buildProductMetadata } from "@/lib/seo/product-metadata"
 import { getPublicMascots } from "@/lib/store/public-mascots"
 import { findProductBySlug } from "@/lib/utils/product-slug"
 
+export const revalidate = 600
+
 type PageProps = {
   params: Promise<{ slug: string }>
 }

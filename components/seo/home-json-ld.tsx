@@ -9,6 +9,7 @@ import {
 } from "@/lib/seo/site"
 import { loadSiteData } from "@/lib/store"
 import { getProductImages } from "@/lib/utils/product-images"
+import { resolvePublicImageSrc } from "@/lib/utils/public-product-images"
 
 export async function HomeJsonLd() {
   const data = await loadSiteData()
@@ -89,6 +90,9 @@ export async function HomeJsonLd() {
     name: "Inflatable Mascots & Accessories",
     itemListElement: products.slice(0, 20).map((product, index) => {
       const images = getProductImages(product)
+      const image = images[0]
+        ? resolvePublicImageSrc(product.id, images[0], 0)
+        : undefined
       return {
         "@type": "ListItem",
         position: index + 1,
@@ -96,7 +100,7 @@ export async function HomeJsonLd() {
           "@type": "Product",
           name: product.name,
           description: product.description,
-          image: images[0] || undefined,
+          image: image?.startsWith("/") ? `${SITE_URL}${image}` : image,
           offers: {
             "@type": "Offer",
             priceCurrency: "PKR",

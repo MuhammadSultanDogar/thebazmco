@@ -67,7 +67,7 @@ export function SmartProductImage({
       src={src}
       alt={alt}
       fill
-      unoptimized={src.startsWith("data:image/")}
+      unoptimized={src.startsWith("data:image/") || src.startsWith("/api/product-image/")}
       sizes={sizes}
       priority={priority}
       onLoad={onLoad}
