@@ -1,31 +1,17 @@
 import { NextResponse } from "next/server"
-import { loadSiteData } from "@/lib/store"
+import { loadSiteConfig } from "@/lib/store"
+import {
+  parseStoredImageRef,
+  readMascotImageBlob,
+  resolveProductImageSrc,
+} from "@/lib/store/mascot-image-store"
 import { getProductImages } from "@/lib/utils/product-images"
 import { isDataUrl } from "@/lib/utils/compress-image"
 
 const IMAGE_CACHE =
   "public, max-age=31536000, s-maxage=31536000, stale-while-revalidate=86400, immutable"
 
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ productId: string }> },
-) {
-  const { productId } = await params
-  const { searchParams } = new URL(request.url)
-  const index = Math.max(0, Number(searchParams.get("i") ?? "0") || 0)
-
-  const data = await loadSiteData()
-  const product = data.mascots.find((m) => m.id === productId)
-  if (!product) {
-    return new NextResponse("Not found", { status: 404 })
-  }
-
-  const images = getProductImages(product)
-  const src = images[index] ?? images[0]
-  if (!src) {
-    return new NextResponse("No image", { status: 404 })
-  }
-
+function imageResponse(src: string) {
   if (isDataUrl(src)) {
     const comma = src.indexOf(",")
     if (comma === -1) {
@@ -53,4 +39,38 @@ export async function GET(
   }
 
   return new NextResponse("Unsupported image source", { status: 400 })
+}
+
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ productId: string }> },
+) {
+  const { productId } = await params
+  const { searchParams } = new URL(request.url)
+  const index = Math.max(0, Number(searchParams.get("i") ?? "0") || 0)
+
+  const fromImageKey = await resolveProductImageSrc(productId, index)
+  if (fromImageKey) {
+    return imageResponse(fromImageKey)
+  }
+
+  const config = await loadSiteConfig()
+  const product = config.mascots.find((m) => m.id === productId)
+  if (!product) {
+    return new NextResponse("Not found", { status: 404 })
+  }
+
+  const images = getProductImages(product)
+  const src = images[index] ?? images[0]
+  if (!src) {
+    return new NextResponse("No image", { status: 404 })
+  }
+
+  const ref = parseStoredImageRef(src)
+  if (ref) {
+    const blob = await readMascotImageBlob(ref.productId, ref.index)
+    if (blob) return imageResponse(blob)
+  }
+
+  return imageResponse(src)
 }

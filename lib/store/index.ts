@@ -14,6 +14,14 @@ import {
   SITE_DATA_KEY,
   testRedisConnection,
 } from "@/lib/store/redis-client"
+import { splitMascotImagesForStorage } from "@/lib/store/mascot-image-store"
+import {
+  getCachedRawSiteData,
+  getCachedSiteConfig,
+  invalidateSiteCache,
+  setCachedRawSiteData,
+  setCachedSiteConfig,
+} from "@/lib/store/site-cache"
 
 type SiteConfig = Omit<SiteData, "orders">
 
@@ -21,11 +29,16 @@ let lastBackend: StorageBackend = "memory"
 let lastDataSizeBytes: number | null = null
 
 async function readRawFromRedis(): Promise<Partial<SiteData> | null> {
+  const cached = getCachedRawSiteData()
+  if (cached !== undefined) return cached
+
   const redis = getRedis()
   if (!redis) return null
 
   try {
-    return await redis.get<Partial<SiteData>>(SITE_DATA_KEY)
+    const stored = await redis.get<Partial<SiteData>>(SITE_DATA_KEY)
+    setCachedRawSiteData(stored)
+    return stored
   } catch (error) {
     console.error("Redis raw read failed:", error)
     return null
@@ -33,20 +46,42 @@ async function readRawFromRedis(): Promise<Partial<SiteData> | null> {
 }
 
 async function readConfigFromRedis(): Promise<SiteConfig | null> {
+  const cached = getCachedSiteConfig()
+  if (cached) return cached
+
   const stored = await readRawFromRedis()
   if (!stored) return null
 
   const normalized = normalizeSiteData(stored)
   const { orders: _orders, ...config } = normalized
-  return config
+
+  const { mascots, changed } = await splitMascotImagesForStorage(config.mascots)
+  const nextConfig = changed ? { ...config, mascots } : config
+
+  if (changed) {
+    const redis = getRedis()
+    if (redis) {
+      const payload = { ...nextConfig, orders: [] }
+      await redis.set(SITE_DATA_KEY, payload)
+      lastDataSizeBytes = Buffer.byteLength(JSON.stringify(payload), "utf-8")
+      setCachedRawSiteData(payload)
+    }
+  }
+
+  setCachedSiteConfig(nextConfig)
+  return nextConfig
 }
 
 async function writeConfigToRedis(config: SiteConfig) {
   const redis = getRedis()
   if (!redis) throw new Error("Redis not configured")
 
-  const payload = { ...config, orders: [] }
+  const { mascots } = await splitMascotImagesForStorage(config.mascots)
+  const payload = { ...config, mascots, orders: [] }
   await redis.set(SITE_DATA_KEY, payload)
+  invalidateSiteCache()
+  setCachedRawSiteData(payload)
+  setCachedSiteConfig({ ...config, mascots })
   lastBackend = "upstash-redis"
   lastDataSizeBytes = Buffer.byteLength(JSON.stringify(payload), "utf-8")
 }
@@ -74,6 +109,7 @@ async function persistConfig(config: SiteConfig) {
 
   if (isRedisConfigured()) {
     await writeConfigToRedis(next)
+    invalidateSiteCache()
     return next
   }
 

@@ -8,6 +8,7 @@ import {
 } from "@/lib/auth/manager"
 import { secureJson } from "@/lib/security/headers"
 import { normalizeMascotProduct } from "@/lib/utils/product-images"
+import { hydrateMascotsForManager } from "@/lib/store/mascot-image-store"
 import { sanitizeProductsForPublic } from "@/lib/utils/public-product-images"
 
 export const dynamic = "force-dynamic"
@@ -21,9 +22,9 @@ export async function GET(request: Request) {
     const authError = await requireManagerAuth()
     if (authError) return authError
 
-    return noStoreJson(
-      [...data.mascots].sort((a, b) => a.sortOrder - b.sortOrder),
-    )
+    const sorted = [...data.mascots].sort((a, b) => a.sortOrder - b.sortOrder)
+    const hydrated = await hydrateMascotsForManager(sorted)
+    return noStoreJson(hydrated)
   }
 
   const active = sanitizeProductsForPublic(
