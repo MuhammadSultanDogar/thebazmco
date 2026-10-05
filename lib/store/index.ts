@@ -19,9 +19,14 @@ import {
   getCachedRawSiteData,
   getCachedSiteConfig,
   invalidateSiteCache,
+  readRawFromRedisInflight,
   setCachedRawSiteData,
   setCachedSiteConfig,
 } from "@/lib/store/site-cache"
+import {
+  bustSiteConfigCache,
+  loadSiteConfigCached,
+} from "@/lib/store/redis-config-cache"
 
 type SiteConfig = Omit<SiteData, "orders">
 
@@ -29,47 +34,33 @@ let lastBackend: StorageBackend = "memory"
 let lastDataSizeBytes: number | null = null
 
 async function readRawFromRedis(): Promise<Partial<SiteData> | null> {
-  const cached = getCachedRawSiteData()
-  if (cached !== undefined) return cached
+  return readRawFromRedisInflight(async () => {
+    const redis = getRedis()
+    if (!redis) return null
 
-  const redis = getRedis()
-  if (!redis) return null
-
-  try {
-    const stored = await redis.get<Partial<SiteData>>(SITE_DATA_KEY)
-    setCachedRawSiteData(stored)
-    return stored
-  } catch (error) {
-    console.error("Redis raw read failed:", error)
-    return null
-  }
+    try {
+      const stored = await redis.get<Partial<SiteData>>(SITE_DATA_KEY)
+      setCachedRawSiteData(stored)
+      return stored
+    } catch (error) {
+      console.error("Redis raw read failed:", error)
+      return null
+    }
+  })
 }
 
 async function readConfigFromRedis(): Promise<SiteConfig | null> {
   const cached = getCachedSiteConfig()
   if (cached) return cached
 
-  const stored = await readRawFromRedis()
-  if (!stored) return null
-
-  const normalized = normalizeSiteData(stored)
-  const { orders: _orders, ...config } = normalized
-
-  const { mascots, changed } = await splitMascotImagesForStorage(config.mascots)
-  const nextConfig = changed ? { ...config, mascots } : config
-
-  if (changed) {
-    const redis = getRedis()
-    if (redis) {
-      const payload = { ...nextConfig, orders: [] }
-      await redis.set(SITE_DATA_KEY, payload)
-      lastDataSizeBytes = Buffer.byteLength(JSON.stringify(payload), "utf-8")
-      setCachedRawSiteData(payload)
-    }
+  const fromDataCache = await loadSiteConfigCached()
+  if (fromDataCache) {
+    setCachedSiteConfig(fromDataCache)
+    setCachedRawSiteData({ ...fromDataCache, orders: [] })
+    return fromDataCache
   }
 
-  setCachedSiteConfig(nextConfig)
-  return nextConfig
+  return null
 }
 
 async function writeConfigToRedis(config: SiteConfig) {
@@ -80,6 +71,7 @@ async function writeConfigToRedis(config: SiteConfig) {
   const payload = { ...config, mascots, orders: [] }
   await redis.set(SITE_DATA_KEY, payload)
   invalidateSiteCache()
+  bustSiteConfigCache()
   setCachedRawSiteData(payload)
   setCachedSiteConfig({ ...config, mascots })
   lastBackend = "upstash-redis"
@@ -163,7 +155,7 @@ export async function loadSiteData(): Promise<SiteData> {
   let orders = await loadOrdersFromStore()
 
   if (isRedisConfigured() && orders.length === 0) {
-    const raw = await readRawFromRedis()
+    const raw = getCachedRawSiteData()
     const legacyOrders = Array.isArray(raw?.orders) ? raw.orders : []
     if (legacyOrders.length > 0) {
       orders = await migrateLegacyOrdersIfNeeded(legacyOrders)
@@ -186,6 +178,7 @@ export async function saveSiteData(data: SiteData): Promise<SiteData> {
   const { orders, ...config } = normalized
   const savedConfig = await persistConfig(config)
   await saveOrders(orders, savedConfig)
+  bustSiteConfigCache()
 
   const saved = { ...savedConfig, orders }
   lastDataSizeBytes = Buffer.byteLength(JSON.stringify(saved), "utf-8")

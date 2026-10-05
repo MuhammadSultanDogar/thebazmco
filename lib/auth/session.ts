@@ -1,7 +1,8 @@
 import { createHmac, randomBytes, timingSafeEqual } from "crypto"
 
 export const SESSION_COOKIE_NAME = "manager_session"
-const SESSION_TTL_MS = 24 * 60 * 60 * 1000
+/** Max session length even with activity (server-side). Idle logout is shorter in the manager UI. */
+export const SESSION_TTL_MS = 8 * 60 * 60 * 1000
 
 export class SessionNotConfiguredError extends Error {
   constructor() {

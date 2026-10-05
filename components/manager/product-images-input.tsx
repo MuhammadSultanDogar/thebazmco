@@ -1,7 +1,7 @@
 "use client"
 
-import { useRef } from "react"
-import { Upload, X, Star } from "lucide-react"
+import { useRef, useState } from "react"
+import { Link2, Upload, X, Star } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { compressImage } from "@/lib/utils/compress-image"
@@ -12,8 +12,18 @@ type ProductImagesInputProps = {
   onError?: (message: string) => void
 }
 
+function isValidImageUrl(value: string): boolean {
+  try {
+    const url = new URL(value)
+    return url.protocol === "https:" || url.protocol === "http:"
+  } catch {
+    return false
+  }
+}
+
 export function ProductImagesInput({ images, onChange, onError }: ProductImagesInputProps) {
   const fileRef = useRef<HTMLInputElement>(null)
+  const [urlDraft, setUrlDraft] = useState("")
 
   const handleUpload = async (files: FileList | null) => {
     if (!files?.length) return
@@ -54,10 +64,18 @@ export function ProductImagesInput({ images, onChange, onError }: ProductImagesI
     onChange(next)
   }
 
-  const addUrl = (url: string) => {
-    const trimmed = url.trim()
+  const addUrl = () => {
+    const trimmed = urlDraft.trim()
     if (!trimmed) return
+
+    if (!isValidImageUrl(trimmed)) {
+      onError?.("Enter a full image link starting with https://")
+      return
+    }
+
     onChange([...images, trimmed])
+    setUrlDraft("")
+    onError?.("")
   }
 
   return (
@@ -65,7 +83,8 @@ export function ProductImagesInput({ images, onChange, onError }: ProductImagesI
       <div>
         <label className="block text-sm font-medium mb-2">Product Images</label>
         <p className="text-xs text-muted-foreground mb-3">
-          First image is the cover photo. Upload multiple angles or details.
+          First image is the cover. Prefer <strong>image links</strong> (below) — they use less
+          database bandwidth than uploading files here.
         </p>
 
         {images.length > 0 && (
@@ -107,16 +126,46 @@ export function ProductImagesInput({ images, onChange, onError }: ProductImagesI
           </div>
         )}
 
-        <Input
-          placeholder="Paste image URL and press Enter"
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault()
-              addUrl((e.target as HTMLInputElement).value)
-              ;(e.target as HTMLInputElement).value = ""
-            }
-          }}
-        />
+        <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-3">
+          <p className="text-xs font-semibold text-primary flex items-center gap-2">
+            <Link2 className="w-3.5 h-3.5" />
+            Add image from link (recommended)
+          </p>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Host your photo on a service that gives a <strong>direct https link</strong> (e.g.{" "}
+            <a
+              href="https://imgbb.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline text-primary"
+            >
+              ImgBB
+            </a>
+            , Cloudinary, or your Vercel Blob URL), paste the link here, then click Add URL.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Input
+              value={urlDraft}
+              onChange={(e) => setUrlDraft(e.target.value)}
+              placeholder="https://…/your-mascot-photo.jpg"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault()
+                  addUrl()
+                }
+              }}
+            />
+            <Button type="button" variant="secondary" className="shrink-0" onClick={addUrl}>
+              Add URL
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <div className="h-px flex-1 bg-border" />
+        <span className="text-xs text-muted-foreground uppercase tracking-wide">or</span>
+        <div className="h-px flex-1 bg-border" />
       </div>
 
       <input
@@ -137,7 +186,7 @@ export function ProductImagesInput({ images, onChange, onError }: ProductImagesI
         onClick={() => fileRef.current?.click()}
       >
         <Upload className="w-4 h-4 mr-2" />
-        Upload images from device
+        Upload from device (uses more database storage)
       </Button>
       <p className="text-xs text-muted-foreground">JPG, PNG, WebP · max 8MB each · multiple allowed</p>
     </div>

@@ -7,13 +7,11 @@ import {
   SITE_NAME,
   SITE_URL,
 } from "@/lib/seo/site"
-import { loadSiteData } from "@/lib/store"
+import type { MascotProduct } from "@/lib/types/mascot"
 import { getProductImages } from "@/lib/utils/product-images"
 import { resolvePublicImageSrc } from "@/lib/utils/public-product-images"
 
-export async function HomeJsonLd() {
-  const data = await loadSiteData()
-  const products = data.mascots.filter((p) => p.active)
+export function HomeJsonLd({ products }: { products: MascotProduct[] }) {
 
   const organization = {
     "@context": "https://schema.org",

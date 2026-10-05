@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { loadSiteData } from "@/lib/store"
+import { loadSiteConfig } from "@/lib/store"
 import { OG_IMAGE_PATH, SITE_NAME, SITE_URL } from "@/lib/seo/site"
 import {
   findProductBySlug,
@@ -12,8 +12,8 @@ export async function buildProductMetadata(
   slug: string,
 ): Promise<Metadata> {
   try {
-    const data = await loadSiteData()
-    const product = findProductBySlug(data.mascots, categoryPath, slug)
+    const config = await loadSiteConfig()
+    const product = findProductBySlug(config.mascots, categoryPath, slug)
 
     if (!product) {
       return { title: "Product Not Found" }

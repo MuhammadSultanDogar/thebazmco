@@ -20,7 +20,7 @@ export function HomePage({ initialProducts, initialOpenProduct }: HomePageProps)
     <main className="relative min-h-screen">
       <MascotBackground />
       <div className="relative z-10">
-        <HomeJsonLd />
+        <HomeJsonLd products={initialProducts ?? []} />
         <Header />
         <Hero />
         <MascotsShop

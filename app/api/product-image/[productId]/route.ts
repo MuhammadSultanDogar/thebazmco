@@ -1,11 +1,5 @@
 import { NextResponse } from "next/server"
-import { loadSiteConfig } from "@/lib/store"
-import {
-  parseStoredImageRef,
-  readMascotImageBlob,
-  resolveProductImageSrc,
-} from "@/lib/store/mascot-image-store"
-import { getProductImages } from "@/lib/utils/product-images"
+import { readMascotImageBlob, resolveProductImageSrc } from "@/lib/store/mascot-image-store"
 import { isDataUrl } from "@/lib/utils/compress-image"
 
 const IMAGE_CACHE =
@@ -54,23 +48,5 @@ export async function GET(
     return imageResponse(fromImageKey)
   }
 
-  const config = await loadSiteConfig()
-  const product = config.mascots.find((m) => m.id === productId)
-  if (!product) {
-    return new NextResponse("Not found", { status: 404 })
-  }
-
-  const images = getProductImages(product)
-  const src = images[index] ?? images[0]
-  if (!src) {
-    return new NextResponse("No image", { status: 404 })
-  }
-
-  const ref = parseStoredImageRef(src)
-  if (ref) {
-    const blob = await readMascotImageBlob(ref.productId, ref.index)
-    if (blob) return imageResponse(blob)
-  }
-
-  return imageResponse(src)
+  return new NextResponse("Not found", { status: 404 })
 }

@@ -28,6 +28,7 @@ import { OrderAlertPoller } from "@/components/manager/order-alert-poller"
 import { ProductImagesInput } from "@/components/manager/product-images-input"
 import { normalizeMascotProduct } from "@/lib/utils/product-images"
 import { StorageTab } from "@/components/manager/storage-tab"
+import { ManagerIdleGuard } from "@/components/manager/manager-idle-guard"
 import type { MascotProduct, MascotAccessory } from "@/lib/types/mascot"
 import type { PreOrderSettings } from "@/lib/types/pre-order"
 import { DEFAULT_PRE_ORDER } from "@/lib/types/pre-order"
@@ -442,9 +443,13 @@ export default function ManagerPage() {
     }
   }
 
-  const handleLogout = async () => {
+  const handleLogout = async (reason?: "idle") => {
     await fetch("/api/auth", { method: "DELETE" })
     setIsLoggedIn(false)
+    if (reason === "idle") {
+      setSuccess("Logged out after 30 minutes of inactivity.")
+      setTimeout(() => setSuccess(""), 5000)
+    }
   }
 
   const handleSaveRates = async () => {
@@ -831,7 +836,9 @@ export default function ManagerPage() {
 
   return (
     <div className="min-h-screen bg-background py-12 px-4">
+      <ManagerIdleGuard enabled={isLoggedIn} onIdle={() => void handleLogout("idle")} />
       <OrderAlertPoller
+        enabled={activeTab === "orders"}
         onPendingCount={setPendingOrderCount}
         onNewOrder={(order) => {
           setSuccess(`New order: ${order.orderNumber}`)
@@ -844,7 +851,7 @@ export default function ManagerPage() {
             <h1 className="text-2xl font-bold">Manager Dashboard</h1>
             <p className="text-muted-foreground">Manage rates, invoices, mascots, and terms</p>
           </div>
-          <Button variant="outline" onClick={handleLogout}>
+          <Button variant="outline" onClick={() => void handleLogout()}>
             <LogOut className="w-4 h-4 mr-2" />
             Logout
           </Button>
@@ -1276,8 +1283,17 @@ export default function ManagerPage() {
                               size="sm"
                               variant="outline"
                               onClick={() => {
-                                setEditingMascot({ ...mascot })
-                                setShowMascotForm(true)
+                                void (async () => {
+                                  const res = await fetch(
+                                    `/api/mascots/hydrate?id=${encodeURIComponent(mascot.id)}`,
+                                  )
+                                  if (res.ok) {
+                                    setEditingMascot(await res.json())
+                                  } else {
+                                    setEditingMascot({ ...mascot })
+                                  }
+                                  setShowMascotForm(true)
+                                })()
                               }}
                             >
                               <Pencil className="w-4 h-4" />

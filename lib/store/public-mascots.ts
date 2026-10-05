@@ -1,11 +1,11 @@
 import type { MascotProduct } from "@/lib/types/mascot"
-import { loadSiteData } from "@/lib/store"
+import { loadSiteConfig } from "@/lib/store"
 import { sanitizeProductsForPublic } from "@/lib/utils/public-product-images"
 
 export async function getPublicMascots(): Promise<MascotProduct[]> {
   try {
-    const data = await loadSiteData()
-    const active = data.mascots
+    const config = await loadSiteConfig()
+    const active = config.mascots
       .filter((m) => m.active)
       .map((m) => ({
         id: m.id,

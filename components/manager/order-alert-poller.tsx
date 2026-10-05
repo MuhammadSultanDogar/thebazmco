@@ -5,6 +5,7 @@ import type { ShopOrder } from "@/lib/types/order"
 import { formatPrice } from "@/lib/constants/payment"
 
 type OrderAlertPollerProps = {
+  enabled?: boolean
   onNewOrder?: (order: ShopOrder) => void
   onPendingCount?: (count: number) => void
   pollMs?: number
@@ -28,9 +29,10 @@ function notifyNewOrder(order: ShopOrder) {
 }
 
 export function OrderAlertPoller({
+  enabled = true,
   onNewOrder,
   onPendingCount,
-  pollMs = 120_000,
+  pollMs = 300_000,
 }: OrderAlertPollerProps) {
   const knownIds = useRef<Set<string>>(new Set())
   const ready = useRef(false)
@@ -69,6 +71,8 @@ export function OrderAlertPoller({
   }, [onNewOrder, onPendingCount])
 
   useEffect(() => {
+    if (!enabled) return
+
     void poll()
 
     const timer = setInterval(() => void poll(), pollMs)
@@ -85,7 +89,7 @@ export function OrderAlertPoller({
       clearInterval(timer)
       document.removeEventListener("visibilitychange", onVisibilityChange)
     }
-  }, [poll, pollMs])
+  }, [poll, pollMs, enabled])
 
   return null
 }

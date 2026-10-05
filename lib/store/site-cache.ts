@@ -7,7 +7,8 @@ type CacheEntry<T> = {
   expiresAt: number
 }
 
-const TTL_MS = 120_000
+/** In-process dedupe within a single serverless invocation (parallel RSC loads). */
+const TTL_MS = 600_000
 
 let rawSiteCache: CacheEntry<Partial<SiteData> | null> | null = null
 let configCache: CacheEntry<SiteConfig> | null = null
@@ -38,4 +39,21 @@ export function setCachedSiteConfig(value: SiteConfig) {
 export function invalidateSiteCache() {
   rawSiteCache = null
   configCache = null
+}
+
+let inflightRaw: Promise<Partial<SiteData> | null> | null = null
+
+export function readRawFromRedisInflight(
+  fetcher: () => Promise<Partial<SiteData> | null>,
+): Promise<Partial<SiteData> | null> {
+  const cached = getCachedRawSiteData()
+  if (cached !== undefined) return Promise.resolve(cached)
+
+  if (inflightRaw) return inflightRaw
+
+  inflightRaw = fetcher().finally(() => {
+    inflightRaw = null
+  })
+
+  return inflightRaw
 }

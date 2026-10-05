@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import type { MascotProduct } from "@/lib/types/mascot"
-import { loadSiteData, updateSiteData } from "@/lib/store"
+import { loadSiteConfig, loadSiteData, updateSiteData } from "@/lib/store"
 import {
   assertSameOrigin,
   noStoreJson,
@@ -8,7 +8,6 @@ import {
 } from "@/lib/auth/manager"
 import { secureJson } from "@/lib/security/headers"
 import { normalizeMascotProduct } from "@/lib/utils/product-images"
-import { hydrateMascotsForManager } from "@/lib/store/mascot-image-store"
 import { sanitizeProductsForPublic } from "@/lib/utils/public-product-images"
 
 export const dynamic = "force-dynamic"
@@ -16,19 +15,18 @@ export const dynamic = "force-dynamic"
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const showAll = searchParams.get("all") === "true"
-  const data = await loadSiteData()
-
   if (showAll) {
     const authError = await requireManagerAuth()
     if (authError) return authError
 
-    const sorted = [...data.mascots].sort((a, b) => a.sortOrder - b.sortOrder)
-    const hydrated = await hydrateMascotsForManager(sorted)
-    return noStoreJson(hydrated)
+    const config = await loadSiteConfig()
+    const sorted = [...config.mascots].sort((a, b) => a.sortOrder - b.sortOrder)
+    return noStoreJson(sorted)
   }
 
+  const config = await loadSiteConfig()
   const active = sanitizeProductsForPublic(
-    data.mascots
+    config.mascots
       .filter((m) => m.active)
       .map((m) => {
         const normalized = normalizeMascotProduct(m)
