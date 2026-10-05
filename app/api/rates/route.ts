@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { loadSiteData, updateSiteData } from "@/lib/store"
+import { loadSiteConfig, updateSiteData } from "@/lib/store"
 import {
   assertSameOrigin,
   noStoreJson,
@@ -10,8 +10,8 @@ import { secureJson } from "@/lib/security/headers"
 export const dynamic = "force-dynamic"
 
 export async function GET() {
-  const data = await loadSiteData()
-  return NextResponse.json(data.rates, {
+  const config = await loadSiteConfig()
+  return NextResponse.json(config.rates, {
     headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600" },
   })
 }

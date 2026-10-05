@@ -144,12 +144,13 @@ export default function ManagerPage() {
   const [invoiceForm, setInvoiceForm] = useState(getEmptyInvoiceForm())
 
   useEffect(() => {
+    if (!isLoggedIn) return
     fetchRates()
     fetchInvoices()
     fetchTerms()
     fetchMascots()
     fetchShopSettings()
-  }, [])
+  }, [isLoggedIn])
 
   // Auto-calculate subtotal when rate or travel cost changes
   useEffect(() => {
@@ -415,11 +416,6 @@ export default function ManagerPage() {
         setIsLoggedIn(true)
         setUsername("")
         setPassword("")
-        await fetchRates()
-        await fetchInvoices()
-        await fetchTerms()
-        await fetchMascots()
-        await fetchShopSettings()
       } else {
         const data = await res.json().catch(() => ({}))
         if (res.status === 429) {

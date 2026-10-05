@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { loadSiteData, updateSiteData } from "@/lib/store"
+import { loadSiteConfig, loadSiteData, updateSiteData } from "@/lib/store"
 import {
   assertSameOrigin,
   noStoreJson,
@@ -13,8 +13,8 @@ export async function GET() {
   const authError = await requireManagerAuth()
   if (authError) return authError
 
-  const data = await loadSiteData()
-  return noStoreJson({ terms: data.terms })
+  const config = await loadSiteConfig()
+  return noStoreJson({ terms: config.terms })
 }
 
 export async function POST(request: Request) {

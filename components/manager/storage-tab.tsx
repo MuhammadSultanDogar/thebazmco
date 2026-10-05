@@ -44,18 +44,21 @@ export function StorageTab() {
   const load = async () => {
     setLoading(true)
     try {
-      const [infoRes, exportRes, clicksRes] = await Promise.all([
+      const [infoRes, clicksRes] = await Promise.all([
         fetch("/api/store"),
-        fetch("/api/store?mode=export"),
         fetch("/api/spatiolens-click"),
       ])
 
       if (infoRes.ok) setInfo(await infoRes.json())
-      if (exportRes.ok) setPreview(await exportRes.json())
       if (clicksRes.ok) setSpatiolensClicks(await clicksRes.json())
     } finally {
       setLoading(false)
     }
+  }
+
+  const loadExportPreview = async () => {
+    const exportRes = await fetch("/api/store?mode=export")
+    if (exportRes.ok) setPreview(await exportRes.json())
   }
 
   useEffect(() => {
@@ -232,9 +235,26 @@ export function StorageTab() {
         </div>
       </div>
 
+      <div className="bg-card rounded-2xl p-6 border border-border space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="font-semibold">Stored data preview</h3>
+          {!preview && (
+            <Button variant="outline" size="sm" onClick={() => void loadExportPreview()}>
+              Load preview
+            </Button>
+          )}
+        </div>
+        {!preview && (
+          <p className="text-sm text-muted-foreground">
+            Preview is not loaded automatically — it downloads a lot of data from Redis. Use
+            &quot;Load preview&quot; only when needed, or Download backup.
+          </p>
+        )}
+      </div>
+
       {preview && (
-        <div className="bg-card rounded-2xl p-6 border border-border">
-          <h3 className="font-semibold mb-3">Stored data preview</h3>
+        <div className="bg-card rounded-2xl p-6 border border-border -mt-4">
+          <h3 className="font-semibold mb-3 sr-only">Stored data preview</h3>
           <div className="max-h-[420px] overflow-auto rounded-xl bg-[#0f1117] text-[#e6edf3] p-4 text-xs font-mono">
             <pre className="whitespace-pre-wrap break-words">
               {JSON.stringify(

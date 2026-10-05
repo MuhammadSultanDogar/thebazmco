@@ -215,17 +215,18 @@ function buildHelpSteps(redisReachable: boolean): string[] {
 }
 
 export async function getStorageInfo(): Promise<StorageInfo> {
-  const data = await loadSiteData()
+  const config = await loadConfig()
+  const orders = await loadOrdersFromStore()
   const authLabel = getRedisAuthLabel()
   const hasRedis = isRedisConfigured()
   const redisTest = hasRedis ? await testRedisConnection() : { ok: false as const }
   const vercelEnv = process.env.VERCEL_ENV ?? null
 
   const counts = {
-    mascots: data.mascots.length,
-    activeMascots: data.mascots.filter((m) => m.active).length,
-    orders: data.orders.length,
-    invoices: data.invoices.length,
+    mascots: config.mascots.length,
+    activeMascots: config.mascots.filter((m) => m.active).length,
+    orders: orders.length,
+    invoices: config.invoices.length,
   }
 
   if (hasRedis && redisTest.ok) {
@@ -234,7 +235,7 @@ export async function getStorageInfo(): Promise<StorageInfo> {
       backend: "upstash-redis",
       persistent: true,
       configured: true,
-      updatedAt: data.updatedAt ?? null,
+      updatedAt: config.updatedAt ?? null,
       dataSizeBytes: lastDataSizeBytes,
       connectionLabel: authLabel,
       databaseReachable: true,
@@ -252,7 +253,7 @@ export async function getStorageInfo(): Promise<StorageInfo> {
       backend: "upstash-redis",
       persistent: false,
       configured: true,
-      updatedAt: data.updatedAt ?? null,
+      updatedAt: config.updatedAt ?? null,
       dataSizeBytes: lastDataSizeBytes,
       connectionLabel: authLabel,
       databaseReachable: false,
@@ -268,7 +269,7 @@ export async function getStorageInfo(): Promise<StorageInfo> {
       backend: "local-file",
       persistent: true,
       configured: true,
-      updatedAt: data.updatedAt ?? null,
+      updatedAt: config.updatedAt ?? null,
       dataSizeBytes: lastDataSizeBytes,
       connectionLabel: authLabel,
       databaseReachable: false,
@@ -285,7 +286,7 @@ export async function getStorageInfo(): Promise<StorageInfo> {
     backend: "memory",
     persistent: false,
     configured: false,
-    updatedAt: data.updatedAt ?? null,
+    updatedAt: config.updatedAt ?? null,
     dataSizeBytes: null,
     connectionLabel: authLabel,
     databaseReachable: false,
