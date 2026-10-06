@@ -43,28 +43,34 @@ export function OrderAlertPoller({
     }
 
     try {
-      const res = await fetch("/api/orders", { cache: "no-store" })
+      const res = await fetch("/api/orders?mode=alerts", { cache: "no-store" })
       if (!res.ok) return
 
-      const orders: ShopOrder[] = await res.json()
-      const pending = orders.filter((o) => o.status === "pending_review").length
-      onPendingCount?.(pending)
+      const data: {
+        pendingCount: number
+        orders: Pick<
+          ShopOrder,
+          "id" | "orderNumber" | "status" | "customerPhone" | "total" | "amountDueNow"
+        >[]
+      } = await res.json()
+
+      onPendingCount?.(data.pendingCount)
 
       if (!ready.current) {
-        knownIds.current = new Set(orders.map((o) => o.id))
+        knownIds.current = new Set(data.orders.map((o) => o.id))
         ready.current = true
         return
       }
 
-      for (const order of orders) {
+      for (const order of data.orders) {
         if (knownIds.current.has(order.id)) continue
         if (order.status === "pending_review") {
-          notifyNewOrder(order)
-          onNewOrder?.(order)
+          notifyNewOrder(order as ShopOrder)
+          onNewOrder?.(order as ShopOrder)
         }
       }
 
-      knownIds.current = new Set(orders.map((o) => o.id))
+      knownIds.current = new Set(data.orders.map((o) => o.id))
     } catch {
       /* silent */
     }

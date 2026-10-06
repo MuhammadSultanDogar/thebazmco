@@ -2,20 +2,29 @@ import type { ShopOrder, OrderStatus } from "@/lib/types/order"
 import type { SiteData } from "@/lib/types/site-data"
 import { getRedis, isRedisConfigured, ORDERS_KEY } from "@/lib/store/redis-client"
 import { readFromLocalFile, writeToLocalFile } from "@/lib/store/local-file"
+import { readOrdersInflight, setCachedOrders } from "@/lib/store/orders-cache"
+
+async function readOrdersFromRedis(): Promise<ShopOrder[]> {
+  const redis = getRedis()
+  if (!redis) return []
+
+  try {
+    const orders = await redis.get<ShopOrder[]>(ORDERS_KEY)
+    if (Array.isArray(orders)) {
+      setCachedOrders(orders)
+      return orders
+    }
+  } catch (error) {
+    console.error("Redis orders read failed:", error)
+  }
+
+  return []
+}
 
 export async function loadOrdersFromStore(): Promise<ShopOrder[]> {
   if (isRedisConfigured()) {
-    const redis = getRedis()
-    if (!redis) return []
-
-    try {
-      const orders = await redis.get<ShopOrder[]>(ORDERS_KEY)
-      if (Array.isArray(orders)) return orders
-    } catch (error) {
-      console.error("Redis orders read failed:", error)
-    }
-
-    return []
+    const cached = await readOrdersInflight(readOrdersFromRedis)
+    return cached
   }
 
   if (process.env.NODE_ENV !== "production") {
@@ -30,6 +39,7 @@ async function saveOrdersToRedis(orders: ShopOrder[]) {
   const redis = getRedis()
   if (!redis) throw new Error("Redis not configured")
   await redis.set(ORDERS_KEY, orders)
+  setCachedOrders(orders)
 }
 
 async function saveOrdersLocally(allData: SiteData) {

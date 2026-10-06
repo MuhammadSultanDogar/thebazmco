@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState, useEffect, useMemo } from "react"
+import { useRef, useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Eye, Trash2, Truck, Check, X, Loader2, Download, Mail, Save, Printer, FileText } from "lucide-react"
@@ -8,7 +8,8 @@ import type { ShopOrder, OrderStatus } from "@/lib/types/order"
 import type { OrderNotificationSettings } from "@/lib/types/order-notifications"
 import { DEFAULT_ORDER_NOTIFICATIONS } from "@/lib/types/order-notifications"
 import { formatPrice } from "@/lib/constants/payment"
-import { countOrdersByStatus, downloadOrdersCsv } from "@/lib/utils/orders-csv"
+import { downloadOrdersCsv } from "@/lib/utils/orders-csv"
+import type { ShopOrderSummary } from "@/lib/utils/order-summary"
 import { requestOrderAlertPermission } from "@/components/manager/order-alert-poller"
 import { ShopOrderInvoiceTemplate } from "@/components/shop-order-invoice-template"
 import { downloadOrderInvoicePdf, printOrderInvoice } from "@/lib/utils/download-order-invoice"
@@ -37,11 +38,32 @@ const filterOptions: { value: StatusFilter; label: string }[] = [
   { value: "rejected", label: "Rejected" },
 ]
 
+const PAGE_SIZE = 20
+
+type OrdersListResponse = {
+  orders: ShopOrderSummary[]
+  total: number
+  page: number
+  limit: number
+  totalPages: number
+  statusCounts: Record<OrderStatus, number>
+}
+
 export function ShopOrdersTab() {
-  const [orders, setOrders] = useState<ShopOrder[]>([])
+  const [orders, setOrders] = useState<ShopOrderSummary[]>([])
   const [viewing, setViewing] = useState<ShopOrder | null>(null)
+  const [loadingView, setLoadingView] = useState(false)
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all")
+  const [page, setPage] = useState(1)
+  const [total, setTotal] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
+  const [statusCounts, setStatusCounts] = useState<Record<OrderStatus, number>>({
+    pending_review: 0,
+    approved: 0,
+    dispatched: 0,
+    rejected: 0,
+  })
   const [fetchError, setFetchError] = useState("")
   const [notifications, setNotifications] = useState<OrderNotificationSettings>(
     DEFAULT_ORDER_NOTIFICATIONS,
@@ -99,16 +121,27 @@ export function ShopOrdersTab() {
     }
   }
 
-  const fetchOrders = async () => {
+  const fetchOrders = async (pageToLoad = page) => {
     setLoading(true)
     setFetchError("")
     try {
-      const res = await fetch("/api/orders", { cache: "no-store" })
+      const params = new URLSearchParams({
+        page: String(pageToLoad),
+        limit: String(PAGE_SIZE),
+      })
+      if (statusFilter !== "all") params.set("status", statusFilter)
+
+      const res = await fetch(`/api/orders?${params}`, { cache: "no-store" })
       if (!res.ok) {
         setFetchError("Could not load orders. Make sure you are logged in.")
         return
       }
-      setOrders(await res.json())
+      const data: OrdersListResponse = await res.json()
+      setOrders(data.orders)
+      setTotal(data.total)
+      setPage(data.page)
+      setTotalPages(data.totalPages)
+      setStatusCounts(data.statusCounts)
     } catch {
       setFetchError("Failed to fetch orders.")
     } finally {
@@ -116,17 +149,33 @@ export function ShopOrdersTab() {
     }
   }
 
+  const openOrder = async (summary: ShopOrderSummary) => {
+    setLoadingView(true)
+    setFetchError("")
+    try {
+      const res = await fetch(`/api/orders?id=${encodeURIComponent(summary.id)}`, {
+        cache: "no-store",
+      })
+      if (!res.ok) {
+        setFetchError("Could not load order details.")
+        return
+      }
+      setViewing(await res.json())
+    } catch {
+      setFetchError("Failed to load order details.")
+    } finally {
+      setLoadingView(false)
+    }
+  }
+
   useEffect(() => {
-    void fetchOrders()
     void fetchNotifications()
   }, [])
 
-  const statusCounts = useMemo(() => countOrdersByStatus(orders), [orders])
-
-  const filteredOrders = useMemo(() => {
-    if (statusFilter === "all") return orders
-    return orders.filter((o) => o.status === statusFilter)
-  }, [orders, statusFilter])
+  useEffect(() => {
+    void fetchOrders(page)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- refetch when filter/page changes
+  }, [statusFilter, page])
 
   const updateStatus = async (order: ShopOrder, status: OrderStatus) => {
     try {
@@ -136,8 +185,9 @@ export function ShopOrdersTab() {
         body: JSON.stringify({ id: order.id, status }),
       })
       if (res.ok) {
-        const updated = await res.json()
-        setOrders((prev) => prev.map((o) => (o.id === order.id ? updated : o)))
+        const updated: ShopOrder = await res.json()
+        const { paymentImage: _p, ...summary } = updated
+        setOrders((prev) => prev.map((o) => (o.id === order.id ? summary : o)))
         if (viewing?.id === order.id) {
           setViewing(updated)
           setShowInvoice(false)
@@ -154,9 +204,15 @@ export function ShopOrdersTab() {
       const res = await fetch(`/api/orders?id=${id}`, { method: "DELETE" })
       if (res.ok) {
         setOrders((prev) => prev.filter((o) => o.id !== id))
+        setTotal((t) => Math.max(0, t - 1))
         if (viewing?.id === id) {
           setViewing(null)
           setShowInvoice(false)
+        }
+        if (orders.length === 1 && page > 1) {
+          setPage((p) => p - 1)
+        } else {
+          void fetchOrders(page)
         }
       }
     } catch {
@@ -164,9 +220,18 @@ export function ShopOrdersTab() {
     }
   }
 
-  const handleExportCsv = () => {
-    const suffix = statusFilter === "all" ? "all" : statusFilter
-    downloadOrdersCsv(filteredOrders, `thebazm-orders-${suffix}`)
+  const handleExportCsv = async () => {
+    const params = new URLSearchParams({ export: "1" })
+    if (statusFilter !== "all") params.set("status", statusFilter)
+    try {
+      const res = await fetch(`/api/orders?${params}`, { cache: "no-store" })
+      if (!res.ok) return
+      const data: { orders: ShopOrderSummary[] } = await res.json()
+      const suffix = statusFilter === "all" ? "all" : statusFilter
+      downloadOrdersCsv(data.orders as ShopOrder[], `thebazm-orders-${suffix}`)
+    } catch {
+      /* ignore */
+    }
   }
 
   const handleDownloadInvoice = async (order: ShopOrder) => {
@@ -220,6 +285,14 @@ export function ShopOrdersTab() {
         <div className="bg-white rounded-xl shadow-lg overflow-hidden">
           <ShopOrderInvoiceTemplate ref={invoiceRef} order={viewing} />
         </div>
+      </div>
+    )
+  }
+
+  if (loadingView) {
+    return (
+      <div className="p-8 text-center">
+        <Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" />
       </div>
     )
   }
@@ -421,16 +494,16 @@ export function ShopOrdersTab() {
       <div className="bg-card rounded-2xl border border-border overflow-hidden">
         <div className="p-4 border-b border-border space-y-4">
           <div className="flex items-center justify-between gap-3 flex-wrap">
-            <h2 className="font-semibold">Shop Orders ({orders.length})</h2>
+            <h2 className="font-semibold">Shop Orders ({total})</h2>
             <div className="flex gap-2 flex-wrap">
-              <Button size="sm" variant="outline" onClick={() => void fetchOrders()}>
+              <Button size="sm" variant="outline" onClick={() => void fetchOrders(page)}>
                 Refresh
               </Button>
               <Button
                 size="sm"
                 variant="outline"
-                onClick={handleExportCsv}
-                disabled={filteredOrders.length === 0}
+                onClick={() => void handleExportCsv()}
+                disabled={total === 0}
               >
                 <Download className="w-4 h-4 mr-2" />
                 Export CSV
@@ -442,7 +515,7 @@ export function ShopOrdersTab() {
             {filterOptions.map((option) => {
               const count =
                 option.value === "all"
-                  ? orders.length
+                  ? Object.values(statusCounts).reduce((a, b) => a + b, 0)
                   : statusCounts[option.value as OrderStatus] ?? 0
               const active = statusFilter === option.value
 
@@ -450,7 +523,10 @@ export function ShopOrdersTab() {
                 <button
                   key={option.value}
                   type="button"
-                  onClick={() => setStatusFilter(option.value)}
+                  onClick={() => {
+                    setStatusFilter(option.value)
+                    setPage(1)
+                  }}
                   className={`text-sm px-3 py-1.5 rounded-full border transition-colors ${
                     active
                       ? "bg-primary text-primary-foreground border-primary"
@@ -472,38 +548,77 @@ export function ShopOrdersTab() {
           <div className="p-8 text-center">
             <Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" />
           </div>
-        ) : filteredOrders.length === 0 ? (
+        ) : orders.length === 0 ? (
           <div className="p-8 text-center text-muted-foreground">
-            {orders.length === 0
+            {total === 0
               ? "No shop orders yet."
               : `No ${statusFilter === "all" ? "" : statusLabels[statusFilter as OrderStatus].toLowerCase()} orders.`}
           </div>
         ) : (
-          <div className="divide-y divide-border">
-            {filteredOrders.map((order) => (
-              <div key={order.id} className="p-4 flex items-center justify-between gap-4 hover:bg-muted/50">
-                <div>
-                  <p className="font-medium">{order.orderNumber}</p>
-                  <p className="text-sm text-muted-foreground">{order.customerPhone}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {new Date(order.createdAt).toLocaleString()} · PKR {formatPrice(order.total)} · {order.items.length} item(s)
-                    {order.orderType === "pre_order" && " · Pre-order"}
-                  </p>
+          <>
+            <div className="divide-y divide-border">
+              {orders.map((order) => (
+                <div key={order.id} className="p-4 flex items-center justify-between gap-4 hover:bg-muted/50">
+                  <div>
+                    <p className="font-medium">{order.orderNumber}</p>
+                    <p className="text-sm text-muted-foreground">{order.customerPhone}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(order.createdAt).toLocaleString()} · PKR {formatPrice(order.total)} · {order.items.length} item(s)
+                      {order.orderType === "pre_order" && " · Pre-order"}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs px-2 py-1 rounded-full ${statusColors[order.status]}`}>
+                      {statusLabels[order.status]}
+                    </span>
+                    <Button size="sm" variant="outline" onClick={() => void openOrder(order)}>
+                      <Eye className="w-4 h-4" />
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => deleteOrder(order.id)} className="text-red-600">
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className={`text-xs px-2 py-1 rounded-full ${statusColors[order.status]}`}>
-                    {statusLabels[order.status]}
-                  </span>
-                  <Button size="sm" variant="outline" onClick={() => setViewing(order)}>
-                    <Eye className="w-4 h-4" />
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => deleteOrder(order.id)} className="text-red-600">
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
+              ))}
+            </div>
+            {totalPages > 1 && (
+              <div className="p-4 border-t border-border flex flex-wrap items-center justify-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={page <= 1 || loading}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                >
+                  ← Prev
+                </Button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 2)
+                  .map((p, idx, arr) => (
+                    <span key={p} className="flex items-center gap-2">
+                      {idx > 0 && arr[idx - 1] !== p - 1 && (
+                        <span className="text-muted-foreground px-1">…</span>
+                      )}
+                      <Button
+                        size="sm"
+                        variant={p === page ? "default" : "outline"}
+                        disabled={loading}
+                        onClick={() => setPage(p)}
+                      >
+                        {p}
+                      </Button>
+                    </span>
+                  ))}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={page >= totalPages || loading}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                >
+                  Next →
+                </Button>
               </div>
-            ))}
-          </div>
+            )}
+          </>
         )}
       </div>
     </div>

@@ -18,6 +18,10 @@ import { enforceRateLimit } from "@/lib/security/rate-limit"
 import { validateOrderPayload } from "@/lib/security/validate-order"
 import { secureJson } from "@/lib/security/headers"
 import { createOrderInvoiceToken } from "@/lib/utils/order-invoice-token"
+import {
+  countOrdersByStatusAll,
+  toOrderSummary,
+} from "@/lib/utils/order-summary"
 
 export const dynamic = "force-dynamic"
 
@@ -28,22 +32,88 @@ const VALID_STATUSES: OrderStatus[] = [
   "rejected",
 ]
 
+const DEFAULT_PAGE_SIZE = 20
+const MAX_PAGE_SIZE = 50
+
+function parsePageSize(raw: string | null): number {
+  const n = parseInt(raw ?? String(DEFAULT_PAGE_SIZE), 10)
+  if (!Number.isFinite(n) || n < 1) return DEFAULT_PAGE_SIZE
+  return Math.min(n, MAX_PAGE_SIZE)
+}
+
+function filterAndSortOrders(
+  orders: ShopOrder[],
+  status: string | null,
+): ShopOrder[] {
+  let list = orders
+  if (status && status !== "all" && VALID_STATUSES.includes(status as OrderStatus)) {
+    list = list.filter((o) => o.status === status)
+  }
+  return [...list].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+}
+
 export async function GET(request: Request) {
   const authError = await requireManagerAuth()
   if (authError) return authError
 
   const { searchParams } = new URL(request.url)
-  const status = searchParams.get("status")
+  const id = searchParams.get("id")
 
-  let orders = await loadOrdersFromStore()
-
-  if (status && status !== "all" && VALID_STATUSES.includes(status as OrderStatus)) {
-    orders = orders.filter((o) => o.status === status)
+  if (id) {
+    const orders = await loadOrdersFromStore()
+    const order = orders.find((o) => o.id === id)
+    if (!order) {
+      return secureJson({ error: "Order not found" }, { status: 404 })
+    }
+    return noStoreJson(order)
   }
 
-  orders.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+  const mode = searchParams.get("mode")
+  const status = searchParams.get("status")
+  const orders = await loadOrdersFromStore()
 
-  return noStoreJson(orders)
+  if (mode === "alerts") {
+    return noStoreJson({
+      pendingCount: orders.filter((o) => o.status === "pending_review").length,
+      orders: orders.map((o) => ({
+        id: o.id,
+        orderNumber: o.orderNumber,
+        status: o.status,
+        createdAt: o.createdAt,
+        customerPhone: o.customerPhone,
+        total: o.total,
+        amountDueNow: o.amountDueNow,
+      })),
+    })
+  }
+
+  const filtered = filterAndSortOrders(orders, status)
+  const statusCounts = countOrdersByStatusAll(orders)
+  const total = filtered.length
+
+  if (searchParams.get("export") === "1") {
+    return noStoreJson({
+      orders: filtered.map(toOrderSummary),
+      total,
+      statusCounts,
+    })
+  }
+
+  const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10) || 1)
+  const limit = parsePageSize(searchParams.get("limit"))
+  const totalPages = Math.max(1, Math.ceil(total / limit))
+  const safePage = Math.min(page, totalPages)
+  const start = (safePage - 1) * limit
+  const pageOrders = filtered.slice(start, start + limit)
+
+  return noStoreJson({
+    orders: pageOrders.map(toOrderSummary),
+    total,
+    page: safePage,
+    limit,
+    totalPages,
+    statusCounts,
+  })
 }
 
 export async function POST(request: Request) {
